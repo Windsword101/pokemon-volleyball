@@ -237,18 +237,30 @@ function beep(freq, dur = 0.08, type = 'square', vol = 0.06, slide = 0) {
 window.addEventListener('pointerdown', () => { try { if (screen.orientation && screen.orientation.lock && IS_TOUCH) screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} try { if (actx && actx.state === 'suspended') actx.resume(); } catch (e) {} }, { passive: true });
 
 // ======================= BGM =======================
-const bgm = new Audio('assets/bgm.mp3');
-bgm.loop = true; bgm.preload = 'auto'; bgm.volume = 0;
+// 兩首：bgm = 平常（選單/比賽前半）；bgmB = 對戰（任一方拿到 5 分後；比賽結束回到 bgm）
+const mkAudio = src => { const a = new Audio(src); a.loop = true; a.preload = 'auto'; a.volume = 0; return a; };
+const bgm = mkAudio('assets/bgm.mp3'), bgmB = mkAudio('assets/bgm_battle.mp3');
 let bgmUnlocked = false;
-function unlockBgm() { if (bgmUnlocked) return; bgmUnlocked = true; try { const p = bgm.play(); if (p && p.catch) p.catch(() => { bgmUnlocked = false; }); } catch (e) { bgmUnlocked = false; } }
+function unlockBgm() {
+  if (bgmUnlocked) return; bgmUnlocked = true;
+  try { const p = bgm.play(); if (p && p.catch) p.catch(() => { bgmUnlocked = false; }); } catch (e) { bgmUnlocked = false; }
+}
 ['pointerdown', 'keydown', 'touchend'].forEach(ev => window.addEventListener(ev, unlockBgm, { passive: true }));
-function bgmTick() {   // 每幀：淡入淡出、比賽中降低音量、背景分頁暫停
+const BATTLE_AT = 5;
+function wantBattle() {
+  const inMatch = state === 'play' || state === 'point' || state === 'pause' || (state === 'settings' && settingsReturn === 'pause');
+  return inMatch && players.length > 0 && Math.max(scores[0], scores[1]) >= Math.min(BATTLE_AT, winScore() - 1);
+}
+function bgmTick() {   // 每幀：兩首交叉淡入淡出、比賽中降低音量、背景分頁暫停
   if (!bgmUnlocked) return;
-  const inGame = state === 'play' || state === 'point' || state === 'intro';
-  const target = document.hidden ? 0 : (S.music / 100) * (inGame ? 0.55 : state === 'pause' ? 0.3 : 1);
-  bgm.volume = Math.max(0, Math.min(1, bgm.volume + (target - bgm.volume) * 0.12));
-  if (target === 0 && bgm.volume < 0.005) { if (!bgm.paused) bgm.pause(); }
-  else if (bgm.paused) { try { const p = bgm.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+  const battle = wantBattle(), inGame = state === 'play' || state === 'point' || state === 'intro';
+  const base = (S.music / 100) * (inGame ? 0.55 : state === 'pause' ? 0.3 : 1);
+  [[bgm, battle ? 0 : 1], [bgmB, battle ? 1 : 0]].forEach(([au, on]) => {
+    const target = document.hidden ? 0 : base * on;
+    au.volume = Math.max(0, Math.min(1, au.volume + (target - au.volume) * 0.12));
+    if (target === 0 && au.volume < 0.005) { if (!au.paused) { au.pause(); if (!document.hidden && on === 0) au.currentTime = 0; } }
+    else if (au.paused) { try { const p = au.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+  });
 }
 
 // ======================= 輸入 =======================
