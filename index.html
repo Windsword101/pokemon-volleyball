@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-  html,body{margin:0;height:100%;overflow:hidden;background:#10131c;color:#fff;font-family:system-ui,"Microsoft JhengHei","Hiragino Sans",sans-serif;
-    overscroll-behavior:none;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;touch-action:none;background:#10131c;color:#fff;font-family:system-ui,"Microsoft JhengHei","Hiragino Sans",sans-serif;
+    overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
   #app{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
   canvas{width:min(96vw,calc(92vh*1.4210));aspect-ratio:864/608;background:#000;border-radius:6px;box-shadow:0 8px 40px #0008;image-rendering:pixelated;outline:none;touch-action:none}
   #help{font-size:13px;opacity:.7;text-align:center;padding:0 12px;line-height:1.6}
@@ -66,10 +66,15 @@ const LANGS = ['zh', 'en', 'ja'];
 const LANG_NAME = { zh: '繁體中文', en: 'English', ja: '日本語' };
 const HTML_LANG = { zh: 'zh-Hant', en: 'en', ja: 'ja' };
 function guessLang() { const l = (navigator.language || '').toLowerCase(); return l.startsWith('ja') ? 'ja' : l.startsWith('zh') ? 'zh' : 'en'; }
-let S = (() => { const d = { lang: guessLang(), sound: true, diff: 1, win: 7, deuce: true, music: 40 }; try { return { ...d, ...JSON.parse(localStorage.getItem('pokevb') || '{}') }; } catch (e) { return d; } })();
+let S = (() => { const d = { lang: guessLang(), sound: true, diff: 1, win: 7, deuce: true, music: 50 }; try { return { ...d, ...JSON.parse(localStorage.getItem('pokevb') || '{}') }; } catch (e) { return d; } })();
 const net = { role: null, peer: null, conn: null, status: '', code: '', err: '', events: [], replay: false, remote: { left: false, right: false, jump: false, spike: false, skill: false }, remotePick: null, myPicked: false, hostRm: false, guestRm: false, waitRm: false, to: 0 };
 function saveS() { try { localStorage.setItem('pokevb', JSON.stringify(S)); } catch (e) {} }
 
+// 禁止縮放：iOS 會忽略 viewport 的 user-scalable=no，需自行攔截手勢
+['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));
+document.addEventListener('touchmove', e => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTouchEnd <= 350) e.preventDefault(); lastTouchEnd = n; }, { passive: false });
 const CREDIT = 'Make by wo.FAN.H';
 const IS_TOUCH = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) && Math.min(screen.width, screen.height) < 1000;
 if (IS_TOUCH) document.documentElement.classList.add('touch');
@@ -237,14 +242,25 @@ function beep(freq, dur = 0.08, type = 'square', vol = 0.06, slide = 0) {
 window.addEventListener('pointerdown', () => { try { if (screen.orientation && screen.orientation.lock && IS_TOUCH) screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} try { if (actx && actx.state === 'suspended') actx.resume(); } catch (e) {} }, { passive: true });
 
 // ======================= BGM =======================
-// 兩首：bgm = 平常（選單/比賽前半）；bgmB = 對戰（任一方拿到 5 分後；比賽結束回到 bgm）
-const mkAudio = src => { const a = new Audio(src); a.loop = true; a.preload = 'auto'; a.volume = 0; return a; };
-const bgm = mkAudio('assets/bgm.mp3'), bgmB = mkAudio('assets/bgm_battle.mp3');
-let bgmUnlocked = false, bgmTrying = false;
+// 兩首：[0] 平常（選單/比賽前半）；[1] 對戰（任一方拿到 5 分後；比賽結束回到 [0]）
+// 音量用自己記的 lvl 控制：有 https 時走 WebAudio GainNode（iOS 的 audio.volume 無效），否則退回 audio.volume
+const mkTrack = src => { const au = new Audio(src); au.loop = true; au.preload = 'auto'; au.volume = 0; return { au, g: null, lvl: 0 }; };
+const TRACKS = [mkTrack('assets/bgm.mp3'), mkTrack('assets/bgm_battle.mp3')];
+let bgmUnlocked = false, bgmTrying = false, bgmGraph = false;
+function bgmSetupGraph() {
+  if (bgmGraph) return; bgmGraph = true;
+  if (!/^https?:/.test(location.protocol)) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    TRACKS.forEach(tr => { const src = actx.createMediaElementSource(tr.au), g = actx.createGain(); g.gain.value = 0; src.connect(g); g.connect(actx.destination); tr.au.volume = 1; tr.g = g; });
+  } catch (e) { TRACKS.forEach(tr => { tr.g = null; tr.au.volume = 0; }); }
+}
 function unlockBgm() {   // 瀏覽器限制：要使用者操作後才能出聲；play() 成功才算解鎖，失敗會在下一次操作重試
   if (bgmUnlocked || bgmTrying) return; bgmTrying = true;
+  bgmSetupGraph();
+  try { if (actx && actx.state === 'suspended') actx.resume(); } catch (e) {}
   try {
-    const p = bgm.play();
+    const p = TRACKS[0].au.play();
     if (p && p.then) p.then(() => { bgmUnlocked = true; bgmTrying = false; }, () => { bgmTrying = false; });
     else { bgmUnlocked = true; bgmTrying = false; }
   } catch (e) { bgmTrying = false; }
@@ -257,13 +273,15 @@ function wantBattle() {
 }
 function bgmTick() {   // 每幀：兩首交叉淡入淡出、比賽中降低音量、背景分頁暫停
   if (!bgmUnlocked) return;
+  try { if (actx && actx.state === 'suspended') actx.resume().catch(() => {}); } catch (e) {}
   const battle = wantBattle(), inGame = state === 'play' || state === 'point' || state === 'intro';
-  const base = (S.music / 100) * (inGame ? 0.55 : state === 'pause' ? 0.3 : 1);
-  [[bgm, battle ? 0 : 1], [bgmB, battle ? 1 : 0]].forEach(([au, on]) => {
-    const target = document.hidden ? 0 : base * on;
-    au.volume = Math.max(0, Math.min(1, au.volume + (target - au.volume) * 0.12));
-    if (target === 0 && au.volume < 0.005) { if (!au.paused) { au.pause(); if (!document.hidden && on === 0) au.currentTime = 0; } }
-    else if (au.paused) { try { const p = au.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+  const base = Math.pow(S.music / 100, 2) * (inGame ? 0.55 : state === 'pause' ? 0.3 : 1);   // 平方曲線：低檔位才真的小聲
+  TRACKS.forEach((tr, i) => {
+    const on = (i === 1) === battle ? 1 : 0, target = document.hidden ? 0 : base * on;
+    tr.lvl += (target - tr.lvl) * 0.12; if (Math.abs(target - tr.lvl) < 0.003) tr.lvl = target;
+    if (tr.g) tr.g.gain.value = tr.lvl; else tr.au.volume = Math.max(0, Math.min(1, tr.lvl));
+    if (target === 0 && tr.lvl === 0) { if (!tr.au.paused) { tr.au.pause(); if (!document.hidden && on === 0) tr.au.currentTime = 0; } }
+    else if (tr.au.paused) { try { const p = tr.au.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
   });
 }
 
@@ -520,7 +538,13 @@ function updateBall() {
 // ======================= 選單系統 =======================
 function cycleLang(d) { S.lang = LANGS[(LANGS.indexOf(S.lang) + d + 3) % 3]; saveS(); applyLang(); }
 function cycleWin(d) { const i = WIN_OPTS.indexOf(S.win); S.win = WIN_OPTS[(Math.max(0, i) + d + WIN_OPTS.length) % WIN_OPTS.length]; saveS(); }
-function menuDef() {
+function menuDef() {   // 觸控裝置：把間距放大，讓每一列都夠大、好點
+  const d = menuDefRaw();
+  if (!d || !IS_TOUCH) return d;
+  const g2 = d.gap * 1.2, n = d.items.length;
+  return { ...d, gap: g2, y0: d.y0 - (n - 1) * (g2 - d.gap) / 2 };
+}
+function menuDefRaw() {
   switch (state) {
     case 'title': return { y0: 140, gap: 30, items: [
       { label: () => t('vsCpu'), go: () => startPick(1) }, { label: () => t('vs2p'), go: () => startPick(2) },
@@ -529,7 +553,7 @@ function menuDef() {
     case 'settings': return { y0: 92, gap: 28, wide: true, items: [
       { label: () => t('language'), val: () => LANG_NAME[S.lang], adj: d => cycleLang(d) },
       { label: () => t('sound'), val: () => t(S.sound ? 'on' : 'off'), adj: () => { S.sound = !S.sound; saveS(); } },
-      { label: () => t('musicOpt'), val: () => S.music ? S.music + '%' : t('off'), adj: d => { S.music = Math.max(0, Math.min(100, S.music + d * 20)); saveS(); unlockBgm(); } },
+      { label: () => t('musicOpt'), val: () => S.music ? S.music + '%' : t('off'), adj: d => { S.music = Math.max(0, Math.min(100, S.music + d * 10)); saveS(); unlockBgm(); } },
       { label: () => t('difficulty'), val: () => t(['easy', 'normal', 'hard'][S.diff]), adj: d => { S.diff = (S.diff + d + 3) % 3; saveS(); } },
       { label: () => t('winScore'), val: () => S.win, adj: d => cycleWin(d) },
       { label: () => t('deuceOpt'), val: () => t(S.deuce ? 'on' : 'off'), adj: () => { S.deuce = !S.deuce; saveS(); } },
@@ -553,7 +577,7 @@ function menuDef() {
   }
   return null;
 }
-function itemRect(def, i) { const w = def.wide ? 280 : 220; return { x: W / 2 - w / 2, y: def.y0 + i * def.gap - 20, w, h: 28 }; }
+function itemRect(def, i) { const w = def.wide ? 280 : 220; return { x: W / 2 - w / 2, y: def.y0 + i * def.gap - 6 - def.gap / 2 + 1, w, h: def.gap - 2 }; }
 function activate(it, d = 1) { if (it.adj) { it.adj(d); beep(520, 0.05); } else if (it.go) it.go(); }
 function menuKeys(def) {
   const n = def.items.length;
@@ -848,10 +872,10 @@ function drawTitle() {
   text(LANG_NAME[S.lang] + ' ▸', lr.x + lr.w / 2, lr.y + 15, 11);
   drawMenu(menuDef());
   if (!bgmUnlocked && S.music > 0 && frame % 80 < 56) text('♪ ' + t('tapMusic'), 8, 20, 10, '#ffd23f', 'left');   // 提醒：點一下才會出聲
-  text(t('menuHint'), W / 2, 280, 10, '#ffffffaa');
+  if (!IS_TOUCH) text(t('menuHint'), W / 2, 280, 10, '#ffffffaa');
   text(CREDIT, W / 2, 298, 11, '#ffd23f');
 }
-function drawSettings() { drawBackdrop(0.55); const d = menuDef(); drawMenu(d, t('settings')); text(t('menuHint'), W / 2, 288, 10, '#ffffffaa'); }
+function drawSettings() { drawBackdrop(0.55); const d = menuDef(); drawMenu(d, t('settings')); if (!IS_TOUCH) text(t('menuHint'), W / 2, 288, 10, '#ffffffaa'); }
 function drawHowto() {
   drawBackdrop(0.6); text(t('howto'), W / 2, 44, 22, '#ffd23f');
   ctx.fillStyle = '#00000070'; ctx.fillRect(20, 56, W - 40, 190);
@@ -861,7 +885,7 @@ function drawHowto() {
   drawMenu(menuDef());
 }
 function cardX(i) { return 62 + i * 103; }
-function pickBtnRects() { return { back: { x: 10, y: 270, w: 90, h: 26 }, ok: { x: W - 100, y: 270, w: 90, h: 26 } }; }
+function pickBtnRects() { return { back: { x: 8, y: 264, w: 104, h: 32 }, ok: { x: W - 112, y: 264, w: 104, h: 32 } }; }
 function drawPick() {
   drawBackdrop(0.6);
   text(mode === 1 || net.role ? t('pickTitle1') : t('pickTitle', { n: pickStep + 1 }), W / 2, 34, 18, '#ffd23f');
@@ -884,10 +908,10 @@ function drawPick() {
   const b = pickBtnRects();
   [[b.back, t('back')], [b.ok, t('ok')]].forEach(([r, lab], i) => {
     ctx.fillStyle = i ? '#ffd23f' : '#ffffff30'; ctx.fillRect(r.x, r.y, r.w, r.h);
-    if (i) { ctx.font = `14px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = '#1d1a2b'; ctx.fillText(lab, r.x + r.w / 2, r.y + 18); }   // 黃底深字：不加描邊，否則會糊成一團
-    else text(lab, r.x + r.w / 2, r.y + 18, 13);
+    if (i) { ctx.font = `14px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = '#1d1a2b'; ctx.fillText(lab, r.x + r.w / 2, r.y + 21); }   // 黃底深字：不加描邊，否則會糊成一團
+    else text(lab, r.x + r.w / 2, r.y + 21, 13);
   });
-  text(t('pickHint'), W / 2, 288, 10, '#ffffffaa');
+  if (!IS_TOUCH) text(t('pickHint'), W / 2, 288, 10, '#ffffffaa');
 }
 function drawIntro() {
   drawBackground(false);
@@ -963,7 +987,7 @@ cv.addEventListener('pointerdown', e => {
     return;
   }
   if (state === 'intro' && timer < 90) { startMatch(); return; }
-  if ((state === 'play' || state === 'point') && y < 34 && Math.abs(x - W / 2) < 26) doPause();
+  if ((state === 'play' || state === 'point') && y < 42 && Math.abs(x - W / 2) < 36) doPause();
 });
 cv.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('visibilitychange', () => { if (document.hidden) doPause(); });
