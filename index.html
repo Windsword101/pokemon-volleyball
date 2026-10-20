@@ -66,7 +66,7 @@ const LANGS = ['zh', 'en', 'ja'];
 const LANG_NAME = { zh: '繁體中文', en: 'English', ja: '日本語' };
 const HTML_LANG = { zh: 'zh-Hant', en: 'en', ja: 'ja' };
 function guessLang() { const l = (navigator.language || '').toLowerCase(); return l.startsWith('ja') ? 'ja' : l.startsWith('zh') ? 'zh' : 'en'; }
-let S = (() => { const d = { lang: guessLang(), sound: true, diff: 1, win: 7, deuce: true }; try { return { ...d, ...JSON.parse(localStorage.getItem('pokevb') || '{}') }; } catch (e) { return d; } })();
+let S = (() => { const d = { lang: guessLang(), sound: true, diff: 1, win: 7, deuce: true, music: 40 }; try { return { ...d, ...JSON.parse(localStorage.getItem('pokevb') || '{}') }; } catch (e) { return d; } })();
 const net = { role: null, peer: null, conn: null, status: '', code: '', err: '', events: [], replay: false, remote: { left: false, right: false, jump: false, spike: false, skill: false }, remotePick: null, myPicked: false, hostRm: false, guestRm: false, waitRm: false, to: 0 };
 function saveS() { try { localStorage.setItem('pokevb', JSON.stringify(S)); } catch (e) {} }
 
@@ -77,6 +77,7 @@ const NET_STR = {"zh":{"online":"線上對戰","createRoom":"建立房間","join
 const I = {
   zh: {
     copyLink: '複製邀請連結', shareLink: '分享給朋友', copied: '已複製邀請連結！', inviteText: '一起來打寶可夢排球！房號 {code}', joiningRoom: '正在加入房間 {code}…',
+    musicOpt: '音樂音量',
     deuceOpt: '平手需連得兩分', deuceHud: '平手　需連得兩分才贏', advHud: '{name} 賽末點', ht8: '平手（如 6:6）後，需領先 2 分才算獲勝（可在設定關閉）',
     ...NET_STR.zh, title: '寶可夢排球', subtitle: '粉絲同人練習作品・非營利', vsCpu: '單人　對電腦', vs2p: '雙人　對戰', howto: '玩法說明', settings: '設定',
     language: '語言', sound: '音效', on: '開', off: '關', difficulty: '電腦難度', easy: '簡單', normal: '普通', hard: '困難', winScore: '獲勝分數',
@@ -94,6 +95,7 @@ const I = {
   },
   en: {
     copyLink: 'Copy invite link', shareLink: 'Share with a friend', copied: 'Invite link copied!', inviteText: 'Play Pokémon Volleyball with me! Room {code}', joiningRoom: 'Joining room {code}…',
+    musicOpt: 'Music',
     deuceOpt: 'Win by 2 (deuce)', deuceHud: 'DEUCE — win by 2', advHud: '{name} advantage', ht8: 'When tied near the end (e.g. 6–6), you must win by 2 points (can be turned off in Settings)',
     ...NET_STR.en, title: 'Pokémon Volleyball', subtitle: 'Fan-made practice project · non-profit', vsCpu: 'vs CPU (1P)', vs2p: '2 Players', howto: 'How to Play', settings: 'Settings',
     language: 'Language', sound: 'Sound', on: 'On', off: 'Off', difficulty: 'CPU Level', easy: 'Easy', normal: 'Normal', hard: 'Hard', winScore: 'Points to Win',
@@ -111,6 +113,7 @@ const I = {
   },
   ja: {
     copyLink: '招待リンクをコピー', shareLink: '友達に共有', copied: '招待リンクをコピーしました！', inviteText: 'ポケモンバレーで勝負しよう！ルーム {code}', joiningRoom: 'ルーム {code} に参加中…',
+    musicOpt: 'BGM音量',
     deuceOpt: 'デュース（2点差）', deuceHud: 'デュース — 2点差で勝利', advHud: '{name} アドバンテージ', ht8: '終盤で同点（例 6-6）になったら2点差をつけた方が勝ち（設定でオフ可）',
     ...NET_STR.ja, title: 'ポケモンバレー', subtitle: 'ファン制作の練習作品・非営利', vsCpu: 'CPUと対戦（1P）', vs2p: '2人で対戦', howto: '遊び方', settings: '設定',
     language: '言語', sound: 'サウンド', on: 'オン', off: 'オフ', difficulty: 'CPUの強さ', easy: 'よわい', normal: 'ふつう', hard: 'つよい', winScore: '勝利ポイント',
@@ -232,6 +235,21 @@ function beep(freq, dur = 0.08, type = 'square', vol = 0.06, slide = 0) {
   } catch (e) {}
 }
 window.addEventListener('pointerdown', () => { try { if (screen.orientation && screen.orientation.lock && IS_TOUCH) screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} try { if (actx && actx.state === 'suspended') actx.resume(); } catch (e) {} }, { passive: true });
+
+// ======================= BGM =======================
+const bgm = new Audio('assets/bgm.mp3');
+bgm.loop = true; bgm.preload = 'auto'; bgm.volume = 0;
+let bgmUnlocked = false;
+function unlockBgm() { if (bgmUnlocked) return; bgmUnlocked = true; try { const p = bgm.play(); if (p && p.catch) p.catch(() => { bgmUnlocked = false; }); } catch (e) { bgmUnlocked = false; } }
+['pointerdown', 'keydown', 'touchend'].forEach(ev => window.addEventListener(ev, unlockBgm, { passive: true }));
+function bgmTick() {   // 每幀：淡入淡出、比賽中降低音量、背景分頁暫停
+  if (!bgmUnlocked) return;
+  const inGame = state === 'play' || state === 'point' || state === 'intro';
+  const target = document.hidden ? 0 : (S.music / 100) * (inGame ? 0.55 : state === 'pause' ? 0.3 : 1);
+  bgm.volume = Math.max(0, Math.min(1, bgm.volume + (target - bgm.volume) * 0.12));
+  if (target === 0 && bgm.volume < 0.005) { if (!bgm.paused) bgm.pause(); }
+  else if (bgm.paused) { try { const p = bgm.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+}
 
 // ======================= 輸入 =======================
 const keys = {}, pressed = {};
@@ -492,9 +510,10 @@ function menuDef() {
       { label: () => t('vsCpu'), go: () => startPick(1) }, { label: () => t('vs2p'), go: () => startPick(2) },
       { label: () => t('online'), go: () => { net.err = ''; go('online'); } },
       { label: () => t('howto'), go: () => go('howto') }, { label: () => t('settings'), go: () => openSettings('title') }] };
-    case 'settings': return { y0: 104, gap: 30, wide: true, items: [
+    case 'settings': return { y0: 92, gap: 28, wide: true, items: [
       { label: () => t('language'), val: () => LANG_NAME[S.lang], adj: d => cycleLang(d) },
       { label: () => t('sound'), val: () => t(S.sound ? 'on' : 'off'), adj: () => { S.sound = !S.sound; saveS(); } },
+      { label: () => t('musicOpt'), val: () => S.music ? S.music + '%' : t('off'), adj: d => { S.music = Math.max(0, Math.min(100, S.music + d * 20)); saveS(); unlockBgm(); } },
       { label: () => t('difficulty'), val: () => t(['easy', 'normal', 'hard'][S.diff]), adj: d => { S.diff = (S.diff + d + 3) % 3; saveS(); } },
       { label: () => t('winScore'), val: () => S.win, adj: d => cycleWin(d) },
       { label: () => t('deuceOpt'), val: () => t(S.deuce ? 'on' : 'off'), adj: () => { S.deuce = !S.deuce; saveS(); } },
@@ -652,6 +671,7 @@ function netTick() {
 // ======================= 主要更新 =======================
 function update() {
   frame++;
+  bgmTick();
   const g = (state === 'play' || state === 'point' || state === 'over' || state === 'pause') ? '1' : '0';
   if (document.body.dataset.game !== g) document.body.dataset.game = g;
   const def = menuDef();

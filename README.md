@@ -27,4 +27,5 @@ Some strict firewalls / NATs can block direct connections (no TURN server is con
 ## Notes
 - Everything is in `index.html` (sprites are embedded). `assets/` holds the original image files.
 - Pokémon and their names/sprites belong to Nintendo / Game Freak / Creatures Inc. Sprites come from [PokeAPI/sprites](https://github.com/PokeAPI/sprites). This is an unofficial fan project for personal practice, **not for commercial use**.
+- `assets/bgm.mp3` is a user-supplied arrangement of the *Pikachu Volleyball* theme; the music belongs to its original rights holders. Replace it with your own track if you plan to share this widely.
 - Inspired by [gorisanson/pikachu-volleyball](https://github.com/gorisanson/pikachu-volleyball).
