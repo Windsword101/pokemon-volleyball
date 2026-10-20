@@ -24,21 +24,28 @@
   .grp.p2 .dir{grid-column:span 3;min-height:58px;min-width:0}
   #fs{display:none;position:fixed;top:6px;right:6px;z-index:5;font:12px system-ui;color:#fff;background:#0007;border:1px solid #fff5;border-radius:8px;padding:6px 10px}
   #rot{display:none;font-size:12px;opacity:.75;text-align:center;padding:4px 12px}
-  @media (pointer:coarse){
-    #help{display:none} #fs{display:block}
-    .pad{display:flex;visibility:hidden} body[data-game="1"] .pad{visibility:visible}
-  }
-  @media (pointer:coarse) and (orientation:landscape){
-    #app{flex-direction:row;gap:0}
-    canvas{width:min(calc(100vw - 320px),calc(100vh*1.4210));border-radius:0}
-    .pad{width:160px;height:100%;align-items:flex-end;justify-content:center;padding-bottom:16px;box-sizing:border-box}
-  }
-  /* 手機直拿時：把整個畫面旋轉 90° 變成橫向版面（不需要使用者轉手機） */
-  @media (pointer:coarse) and (orientation:portrait){
-    #app{position:fixed;top:0;left:100vw;width:100vh;height:100vw;transform-origin:top left;transform:rotate(90deg);flex-direction:row;gap:0}
-    canvas{width:min(calc(100vh - 320px),calc(100vw*1.4210));border-radius:0}
-    .pad{width:160px;height:100%;align-items:flex-end;justify-content:center;padding-bottom:16px;box-sizing:border-box}
-    #fs{top:auto;bottom:8px}
+  /* ===== 手機 / 觸控裝置（html.touch 由 JS 偵測，不依賴 pointer:coarse）===== */
+  html.touch #help{display:none} html.touch #fs{display:block}
+  html.touch #app{position:fixed;top:0;left:0;width:100vw;width:100dvw;height:100vh;height:100dvh;display:block;overflow:hidden}
+  html.touch canvas{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:0;box-shadow:none;
+    width:min(100vw,calc(100vh*1.4210));width:min(100dvw,calc(100dvh*1.4210))}
+  html.touch .pad{display:flex;position:absolute;bottom:max(8px,env(safe-area-inset-bottom));z-index:3;visibility:hidden;opacity:.88;--s:clamp(46px,17vh,76px);--s:clamp(46px,17dvh,76px)}
+  html.touch #padL{left:max(10px,env(safe-area-inset-left))} html.touch #padR{right:max(10px,env(safe-area-inset-right))}
+  html.touch body[data-game="1"] .pad, body[data-game="1"] html.touch .pad{visibility:visible}
+  html.touch .grp{gap:calc(var(--s)*.14)}
+  html.touch .tb{min-width:var(--s);min-height:var(--s);font-size:clamp(12px,calc(var(--s)*.24),17px)}
+  html.touch .grp.move{grid-template-columns:repeat(2,calc(var(--s)*1.15))} html.touch .grp.move .tb{min-height:calc(var(--s)*1.25)}
+  html.touch .grp.act{grid-template-columns:repeat(2,var(--s))} html.touch .grp.act .hit{min-height:calc(var(--s)*1.2)}
+  html.touch .grp.p2{grid-template-columns:repeat(6,calc(var(--s)*.42));gap:calc(var(--s)*.08);width:auto;max-width:none}
+  html.touch .grp.p2 .jump,html.touch .grp.p2 .hit,html.touch .grp.p2 .skill{min-height:calc(var(--s)*.9);min-width:0;font-size:11px}
+  html.touch .grp.p2 .dir{min-height:calc(var(--s)*.95);min-width:0}
+  body[data-game="1"] .pad{visibility:visible}
+  /* 手機直拿時：把整個畫面旋轉 90° 變成橫向版面（不需要使用者轉手機）*/
+  @media (orientation:portrait){
+    html.touch #app{left:100vw;left:100dvw;width:100vh;width:100dvh;height:100vw;height:100dvw;transform-origin:top left;transform:rotate(90deg)}
+    html.touch canvas{width:min(100vh,calc(100vw*1.4210));width:min(100dvh,calc(100dvw*1.4210))}
+    html.touch .pad{--s:clamp(46px,17vw,76px);--s:clamp(46px,17dvw,76px)}
+    html.touch #fs{top:auto;bottom:8px}
   }
 </style>
 </head>
@@ -62,6 +69,8 @@ let S = (() => { const d = { lang: guessLang(), sound: true, diff: 1, win: 7 }; 
 const net = { role: null, peer: null, conn: null, status: '', code: '', err: '', events: [], replay: false, remote: { left: false, right: false, jump: false, spike: false, skill: false }, remotePick: null, myPicked: false, hostRm: false, guestRm: false, waitRm: false, to: 0 };
 function saveS() { try { localStorage.setItem('pokevb', JSON.stringify(S)); } catch (e) {} }
 
+const IS_TOUCH = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) && Math.min(screen.width, screen.height) < 1000;
+if (IS_TOUCH) document.documentElement.classList.add('touch');
 const NET_STR = {"zh":{"online":"線上對戰","createRoom":"建立房間","joinRoom":"加入房間","enterCode":"輸入 4 位數房號","roomCode":"房號","shareCode":"把房號告訴朋友，等待對方加入…","connecting":"連線中…","waitPick":"等待對手選角…","waitRematch":"等待對手同意再戰…","cancel":"取消","errNotFound":"找不到房間，請確認房號","errClosed":"對手已離線","errNet":"連線失敗（可能被防火牆擋住）","errLib":"無法載入連線元件，請確認網路","netNote":"房主為 P1（左），加入者為 P2（右）"},"en":{"online":"Online Play","createRoom":"Create Room","joinRoom":"Join Room","enterCode":"Enter the 4-digit room code","roomCode":"Room Code","shareCode":"Share this code with your friend and wait…","connecting":"Connecting…","waitPick":"Waiting for the opponent…","waitRematch":"Waiting for the opponent to accept…","cancel":"Cancel","errNotFound":"Room not found. Check the code.","errClosed":"The opponent disconnected","errNet":"Connection failed (a firewall may be blocking it)","errLib":"Could not load the networking library. Check your connection.","netNote":"Host is P1 (left), guest is P2 (right)"},"ja":{"online":"オンライン対戦","createRoom":"ルームを作る","joinRoom":"ルームに入る","enterCode":"4桁のルーム番号を入力","roomCode":"ルーム番号","shareCode":"この番号を友達に伝えて待とう…","connecting":"接続中…","waitPick":"相手を待っています…","waitRematch":"相手の返事を待っています…","cancel":"キャンセル","errNotFound":"ルームが見つかりません。番号を確認してね","errClosed":"相手が切断されました","errNet":"接続に失敗しました（ファイアウォールの可能性）","errLib":"通信ライブラリを読み込めません","netNote":"ホストは P1（左）、参加者は P2（右）"}};
 const I = {
   zh: {
@@ -214,7 +223,7 @@ function beep(freq, dur = 0.08, type = 'square', vol = 0.06, slide = 0) {
     o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + dur);
   } catch (e) {}
 }
-window.addEventListener('pointerdown', () => { try { if (screen.orientation && screen.orientation.lock && matchMedia('(pointer:coarse)').matches) screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} try { if (actx && actx.state === 'suspended') actx.resume(); } catch (e) {} }, { passive: true });
+window.addEventListener('pointerdown', () => { try { if (screen.orientation && screen.orientation.lock && IS_TOUCH) screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} try { if (actx && actx.state === 'suspended') actx.resume(); } catch (e) {} }, { passive: true });
 
 // ======================= 輸入 =======================
 const keys = {}, pressed = {};
@@ -849,10 +858,10 @@ function draw() {
 // ======================= 指標（滑鼠 / 觸控）=======================
 cv.tabIndex = 0;
 const inRect = (x, y, r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
-const portraitMQ = matchMedia('(pointer:coarse) and (orientation:portrait)');
+const portraitMQ = matchMedia('(orientation:portrait)');
 function toLogical(e) {
   const r = cv.getBoundingClientRect();
-  if (portraitMQ.matches) return [(e.clientY - r.top) / r.height * W, (r.right - e.clientX) / r.width * H];   // 版面旋轉 90°
+  if (IS_TOUCH && portraitMQ.matches) return [(e.clientY - r.top) / r.height * W, (r.right - e.clientX) / r.width * H];   // 版面旋轉 90°
   return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H];
 }
 function itemAt(def, x, y) { for (let i = 0; i < def.items.length; i++) if (inRect(x, y, itemRect(def, i))) return i; return -1; }
