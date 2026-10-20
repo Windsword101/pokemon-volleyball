@@ -66,7 +66,7 @@ const LANGS = ['zh', 'en', 'ja'];
 const LANG_NAME = { zh: '繁體中文', en: 'English', ja: '日本語' };
 const HTML_LANG = { zh: 'zh-Hant', en: 'en', ja: 'ja' };
 function guessLang() { const l = (navigator.language || '').toLowerCase(); return l.startsWith('ja') ? 'ja' : l.startsWith('zh') ? 'zh' : 'en'; }
-let S = (() => { const d = { lang: guessLang(), sound: true, diff: 1, win: 7 }; try { return { ...d, ...JSON.parse(localStorage.getItem('pokevb') || '{}') }; } catch (e) { return d; } })();
+let S = (() => { const d = { lang: guessLang(), sound: true, diff: 1, win: 7, deuce: true }; try { return { ...d, ...JSON.parse(localStorage.getItem('pokevb') || '{}') }; } catch (e) { return d; } })();
 const net = { role: null, peer: null, conn: null, status: '', code: '', err: '', events: [], replay: false, remote: { left: false, right: false, jump: false, spike: false, skill: false }, remotePick: null, myPicked: false, hostRm: false, guestRm: false, waitRm: false, to: 0 };
 function saveS() { try { localStorage.setItem('pokevb', JSON.stringify(S)); } catch (e) {} }
 
@@ -76,6 +76,7 @@ if (IS_TOUCH) document.documentElement.classList.add('touch');
 const NET_STR = {"zh":{"online":"線上對戰","createRoom":"建立房間","joinRoom":"加入房間","enterCode":"輸入 4 位數房號","roomCode":"房號","shareCode":"把房號告訴朋友，等待對方加入…","connecting":"連線中…","waitPick":"等待對手選角…","waitRematch":"等待對手同意再戰…","cancel":"取消","errNotFound":"找不到房間，請確認房號","errClosed":"對手已離線","errNet":"連線失敗（可能被防火牆擋住）","errLib":"無法載入連線元件，請確認網路","netNote":"房主為 P1（左），加入者為 P2（右）"},"en":{"online":"Online Play","createRoom":"Create Room","joinRoom":"Join Room","enterCode":"Enter the 4-digit room code","roomCode":"Room Code","shareCode":"Share this code with your friend and wait…","connecting":"Connecting…","waitPick":"Waiting for the opponent…","waitRematch":"Waiting for the opponent to accept…","cancel":"Cancel","errNotFound":"Room not found. Check the code.","errClosed":"The opponent disconnected","errNet":"Connection failed (a firewall may be blocking it)","errLib":"Could not load the networking library. Check your connection.","netNote":"Host is P1 (left), guest is P2 (right)"},"ja":{"online":"オンライン対戦","createRoom":"ルームを作る","joinRoom":"ルームに入る","enterCode":"4桁のルーム番号を入力","roomCode":"ルーム番号","shareCode":"この番号を友達に伝えて待とう…","connecting":"接続中…","waitPick":"相手を待っています…","waitRematch":"相手の返事を待っています…","cancel":"キャンセル","errNotFound":"ルームが見つかりません。番号を確認してね","errClosed":"相手が切断されました","errNet":"接続に失敗しました（ファイアウォールの可能性）","errLib":"通信ライブラリを読み込めません","netNote":"ホストは P1（左）、参加者は P2（右）"}};
 const I = {
   zh: {
+    deuceOpt: '平手需連得兩分', deuceHud: '平手　需連得兩分才贏', advHud: '{name} 賽末點', ht8: '平手（如 6:6）後，需領先 2 分才算獲勝（可在設定關閉）',
     ...NET_STR.zh, title: '寶可夢排球', subtitle: '粉絲同人練習作品・非營利', vsCpu: '單人　對電腦', vs2p: '雙人　對戰', howto: '玩法說明', settings: '設定',
     language: '語言', sound: '音效', on: '開', off: '關', difficulty: '電腦難度', easy: '簡單', normal: '普通', hard: '困難', winScore: '獲勝分數',
     back: '返回', ok: '確定', pickTitle: 'P{n}　選擇角色', pickTitle1: '選擇你的角色', speed: '速度', jump: '跳躍', skill: '技能',
@@ -91,6 +92,7 @@ const I = {
     ht5: '每側最多連續觸球 3 次，第 4 次犯規', ht6: '球落在對方場地即得分，先拿 {n} 分獲勝', ht7: '手機：使用畫面兩側的按鈕操作　Esc / P 暫停',
   },
   en: {
+    deuceOpt: 'Win by 2 (deuce)', deuceHud: 'DEUCE — win by 2', advHud: '{name} advantage', ht8: 'When tied near the end (e.g. 6–6), you must win by 2 points (can be turned off in Settings)',
     ...NET_STR.en, title: 'Pokémon Volleyball', subtitle: 'Fan-made practice project · non-profit', vsCpu: 'vs CPU (1P)', vs2p: '2 Players', howto: 'How to Play', settings: 'Settings',
     language: 'Language', sound: 'Sound', on: 'On', off: 'Off', difficulty: 'CPU Level', easy: 'Easy', normal: 'Normal', hard: 'Hard', winScore: 'Points to Win',
     back: 'Back', ok: 'OK', pickTitle: 'P{n}: Choose Your Pokémon', pickTitle1: 'Choose Your Pokémon', speed: 'Speed', jump: 'Jump', skill: 'Skill',
@@ -106,6 +108,7 @@ const I = {
     ht5: 'Max 3 touches per side, the 4th is a foul', ht6: 'Land the ball on the other side. First to {n} wins', ht7: 'Phone: use the on-screen buttons   Esc / P to pause',
   },
   ja: {
+    deuceOpt: 'デュース（2点差）', deuceHud: 'デュース — 2点差で勝利', advHud: '{name} アドバンテージ', ht8: '終盤で同点（例 6-6）になったら2点差をつけた方が勝ち（設定でオフ可）',
     ...NET_STR.ja, title: 'ポケモンバレー', subtitle: 'ファン制作の練習作品・非営利', vsCpu: 'CPUと対戦（1P）', vs2p: '2人で対戦', howto: '遊び方', settings: '設定',
     language: '言語', sound: 'サウンド', on: 'オン', off: 'オフ', difficulty: 'CPUの強さ', easy: 'よわい', normal: 'ふつう', hard: 'つよい', winScore: '勝利ポイント',
     back: 'もどる', ok: '決定', pickTitle: 'P{n}　ポケモンをえらぼう', pickTitle1: 'ポケモンをえらぼう', speed: 'スピード', jump: 'ジャンプ', skill: 'わざ',
@@ -251,6 +254,9 @@ let state = 'title', mode = 1, focus = 0, settingsReturn = 'title', pauseFrom = 
 let pickStep = 0, cursor = [0, 1], picks = [0, 1];
 let players = [], ball, scores = [0, 0], server = 0, timer = 0, msg = () => '', shake = 0, frame = 0, hitstop = 0, rally = 0, serveMsgT = 0, hintT = 0, firstPoint = true, overT = 0;
 let particles = [], popups = [], msgInfo = null;
+let netWin = 7, netDeuce = true;   // 訪客端以房主的設定為準
+const winScore = () => net.role === 'guest' ? netWin : S.win;
+const deuceOn = () => net.role === 'guest' ? netDeuce : S.deuce;
 function setMsg(k, w) { msgInfo = { k, w }; msg = () => t(k, { name: mn(players[w].mon) }); }
 
 function newPlayer(side, monIdx) {
@@ -398,7 +404,7 @@ function aimOverNet(x, y, dir) {
 function awardPoint(winner, key) {
   scores[winner]++; server = winner; state = 'point'; timer = 90; shake = 8;
   setMsg(key, winner);
-  if (scores[winner] >= S.win) { state = 'over'; focus = 0; overT = 70; setMsg('wins', winner); beep(880, 0.4, 'square', 0.06, 400); }
+  if (scores[winner] >= winScore() && (!deuceOn() || scores[winner] - scores[1 - winner] >= 2)) { state = 'over'; focus = 0; overT = 70; setMsg('wins', winner); beep(880, 0.4, 'square', 0.06, 400); }
 }
 
 function hitBall(p) {
@@ -483,11 +489,12 @@ function menuDef() {
       { label: () => t('vsCpu'), go: () => startPick(1) }, { label: () => t('vs2p'), go: () => startPick(2) },
       { label: () => t('online'), go: () => { net.err = ''; go('online'); } },
       { label: () => t('howto'), go: () => go('howto') }, { label: () => t('settings'), go: () => openSettings('title') }] };
-    case 'settings': return { y0: 112, gap: 34, wide: true, items: [
+    case 'settings': return { y0: 104, gap: 30, wide: true, items: [
       { label: () => t('language'), val: () => LANG_NAME[S.lang], adj: d => cycleLang(d) },
       { label: () => t('sound'), val: () => t(S.sound ? 'on' : 'off'), adj: () => { S.sound = !S.sound; saveS(); } },
       { label: () => t('difficulty'), val: () => t(['easy', 'normal', 'hard'][S.diff]), adj: d => { S.diff = (S.diff + d + 3) % 3; saveS(); } },
       { label: () => t('winScore'), val: () => S.win, adj: d => cycleWin(d) },
+      { label: () => t('deuceOpt'), val: () => t(S.deuce ? 'on' : 'off'), adj: () => { S.deuce = !S.deuce; saveS(); } },
       { label: () => t('back'), go: closeSettings }] };
     case 'howto': return { y0: 268, gap: 30, items: [{ label: () => t('back'), go: () => go('title') }] };
     case 'pause': return { y0: 132, gap: 32, items: [
@@ -594,7 +601,7 @@ function onNetData(m) {
 }
 const r2 = v => Math.round(v * 100) / 100;
 function snapshot() {
-  return { t: 's', st: state, sc: scores, sm: serveMsgT, ht: hintT, ry: rally, mi: msgInfo, shk: r2(shake), ev: net.events.splice(0),
+  return { t: 's', st: state, sc: scores, sm: serveMsgT, ht: hintT, ry: rally, mi: msgInfo, wn: S.win, dc: S.deuce ? 1 : 0, shk: r2(shake), ev: net.events.splice(0),
     p: players.map(p => [r2(p.x), r2(p.y), r2(p.vx), r2(p.vy), p.face, p.dive, p.recover, p.spikeT, p.skillT, p.stun, p.slow, r2(p.energy), p.onGround ? 1 : 0, p.landT, p.diveDir]),
     b: [r2(ball.x), r2(ball.y), r2(ball.vx), r2(ball.vy), ball.fx, r2(ball.spin), ball.owner, ball.touches] };
 }
@@ -605,7 +612,7 @@ function applySnapshot(sn) {
   sn.p.forEach((a, i) => { const p = players[i]; let og; [p.x, p.y, p.vx, p.vy, p.face, p.dive, p.recover, p.spikeT, p.skillT, p.stun, p.slow, p.energy, og, p.landT, p.diveDir] = a; p.onGround = !!og; });
   [ball.x, ball.y, ball.vx, ball.vy, ball.fx, ball.spin, ball.owner, ball.touches] = sn.b;
   ball.trail.push({ x: ball.x, y: ball.y }); if (ball.trail.length > 6) ball.trail.shift();
-  scores = sn.sc; serveMsgT = sn.sm; hintT = sn.ht; rally = sn.ry;
+  netWin = sn.wn; netDeuce = !!sn.dc; scores = sn.sc; serveMsgT = sn.sm; hintT = sn.ht; rally = sn.ry;
   if (sn.mi) setMsg(sn.mi.k, sn.mi.w);
   if (sn.st !== state) { if (sn.st === 'over') { overT = 70; focus = 0; net.waitRm = false; } if (sn.st === 'play' && state !== 'play') { particles = []; popups = []; } state = sn.st; }
   if (sn.shk > shake) shake = sn.shk;
@@ -750,6 +757,10 @@ function drawHUD() {
     ctx.fillStyle = '#1d1a2b'; ctx.fillRect(W / 2 - 12, 6, 24, 18); ctx.fillStyle = '#fff'; ctx.fillRect(W / 2 - 5, 10, 4, 10); ctx.fillRect(W / 2 + 1, 10, 4, 10);
   }
   if (rally >= 3 && state === 'play') text(t('rally', { n: rally }), W / 2, 44, 14, '#ffd23f');
+  if (deuceOn() && scores[0] >= winScore() - 1 && scores[1] >= winScore() - 1) {   // 平手 / 賽末點提示
+    const lead = scores[0] - scores[1];
+    text(lead === 0 ? t('deuceHud') : t('advHud', { name: mn(players[lead > 0 ? 0 : 1].mon) }), W / 2, rally >= 3 && state === 'play' ? 62 : 46, 11, lead === 0 ? '#ff9a9a' : '#ffe84a');
+  }
   if (state === 'point') text(msg(), W / 2, 130, 24);
   if (serveMsgT > 0 && state === 'play') text(serveMsgT > 30 ? t('ready') : t('go'), W / 2, 130, 28, serveMsgT > 30 ? '#fff' : '#ffd23f');
   if (hintT > 0 && state === 'play') { ctx.globalAlpha = Math.min(1, hintT / 30); text(t('hint'), W / 2, 160, 11, '#ffffffdd'); ctx.globalAlpha = 1; }
@@ -787,9 +798,9 @@ function drawSettings() { drawBackdrop(0.55); const d = menuDef(); drawMenu(d, t
 function drawHowto() {
   drawBackdrop(0.6); text(t('howto'), W / 2, 44, 22, '#ffd23f');
   ctx.fillStyle = '#00000070'; ctx.fillRect(20, 56, W - 40, 190);
-  const lines = [t('ht1'), t('ht2'), t('ht3'), t('ht4'), t('ht5'), t('ht6', { n: S.win }), t('ht7')];
+  const lines = [t('ht1'), t('ht2'), t('ht3'), t('ht4'), t('ht5'), t('ht6', { n: S.win }), ...(S.deuce ? [t('ht8')] : []), t('ht7')];
   let y = 82;
-  lines.forEach(l => { wrap(l, W - 70, 12).forEach(w => { text(w, 34, y, 12, '#fff', 'left'); y += 17; }); y += 7; });
+  lines.forEach(l => { wrap(l, W - 70, 12).forEach(w => { text(w, 34, y, 12, '#fff', 'left'); y += 15; }); y += 4; });
   drawMenu(menuDef());
 }
 function cardX(i) { return 62 + i * 103; }
