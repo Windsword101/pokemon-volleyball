@@ -254,7 +254,7 @@ function beep(freq, dur = 0.08, type = 'square', vol = 0.06, slide = 0) {
 window.addEventListener('pointerdown', () => { try { if (screen.orientation && screen.orientation.lock && IS_TOUCH) screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} try { if (actx && actx.state === 'suspended') actx.resume(); } catch (e) {} }, { passive: true });
 
 // ======================= BGM =======================
-// 兩首：[0] 平常（選單/比賽前半）；[1] 對戰（任一方拿到 5 分後；比賽結束回到 [0]）
+// 兩首：[0] 平常（選單/比賽前半）；[1] 對戰（任一方距離獲勝只剩 2 分時；比賽結束回到 [0]）
 // 音量用自己記的 lvl 控制：有 https 時走 WebAudio GainNode（iOS 的 audio.volume 無效），否則退回 audio.volume
 const mkTrack = src => { const au = new Audio(src); au.loop = true; au.preload = 'auto'; au.volume = 0; return { au, g: null, lvl: 0 }; };
 const TRACKS = [mkTrack('assets/bgm.mp3'), mkTrack('assets/bgm_battle.mp3')];
@@ -278,10 +278,10 @@ function unlockBgm() {   // 瀏覽器限制：要使用者操作後才能出聲�
   } catch (e) { bgmTrying = false; }
 }
 ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'keydown', 'touchstart', 'touchend'].forEach(ev => window.addEventListener(ev, unlockBgm, { passive: true }));
-const BATTLE_AT = 5;
+const BATTLE_REMAIN = 2;   // 任一方距離獲勝只剩 2 分時，切換成對戰曲
 function wantBattle() {
   const inMatch = state === 'play' || state === 'point' || state === 'pause' || (state === 'settings' && settingsReturn === 'pause');
-  return inMatch && players.length > 0 && Math.max(scores[0], scores[1]) >= Math.min(BATTLE_AT, winScore() - 1);
+  return inMatch && players.length > 0 && Math.max(scores[0], scores[1]) >= winScore() - BATTLE_REMAIN;
 }
 function bgmTick() {   // 每幀：兩首交叉淡入淡出、比賽中降低音量、背景分頁暫停
   if (!bgmUnlocked) return;
