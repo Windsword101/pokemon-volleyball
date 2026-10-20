@@ -76,6 +76,7 @@ if (IS_TOUCH) document.documentElement.classList.add('touch');
 const NET_STR = {"zh":{"online":"線上對戰","createRoom":"建立房間","joinRoom":"加入房間","enterCode":"輸入 4 位數房號","roomCode":"房號","shareCode":"把房號告訴朋友，等待對方加入…","connecting":"連線中…","waitPick":"等待對手選角…","waitRematch":"等待對手同意再戰…","cancel":"取消","errNotFound":"找不到房間，請確認房號","errClosed":"對手已離線","errNet":"連線失敗（可能被防火牆擋住）","errLib":"無法載入連線元件，請確認網路","netNote":"房主為 P1（左），加入者為 P2（右）"},"en":{"online":"Online Play","createRoom":"Create Room","joinRoom":"Join Room","enterCode":"Enter the 4-digit room code","roomCode":"Room Code","shareCode":"Share this code with your friend and wait…","connecting":"Connecting…","waitPick":"Waiting for the opponent…","waitRematch":"Waiting for the opponent to accept…","cancel":"Cancel","errNotFound":"Room not found. Check the code.","errClosed":"The opponent disconnected","errNet":"Connection failed (a firewall may be blocking it)","errLib":"Could not load the networking library. Check your connection.","netNote":"Host is P1 (left), guest is P2 (right)"},"ja":{"online":"オンライン対戦","createRoom":"ルームを作る","joinRoom":"ルームに入る","enterCode":"4桁のルーム番号を入力","roomCode":"ルーム番号","shareCode":"この番号を友達に伝えて待とう…","connecting":"接続中…","waitPick":"相手を待っています…","waitRematch":"相手の返事を待っています…","cancel":"キャンセル","errNotFound":"ルームが見つかりません。番号を確認してね","errClosed":"相手が切断されました","errNet":"接続に失敗しました（ファイアウォールの可能性）","errLib":"通信ライブラリを読み込めません","netNote":"ホストは P1（左）、参加者は P2（右）"}};
 const I = {
   zh: {
+    copyLink: '複製邀請連結', shareLink: '分享給朋友', copied: '已複製邀請連結！', inviteText: '一起來打寶可夢排球！房號 {code}', joiningRoom: '正在加入房間 {code}…',
     deuceOpt: '平手需連得兩分', deuceHud: '平手　需連得兩分才贏', advHud: '{name} 賽末點', ht8: '平手（如 6:6）後，需領先 2 分才算獲勝（可在設定關閉）',
     ...NET_STR.zh, title: '寶可夢排球', subtitle: '粉絲同人練習作品・非營利', vsCpu: '單人　對電腦', vs2p: '雙人　對戰', howto: '玩法說明', settings: '設定',
     language: '語言', sound: '音效', on: '開', off: '關', difficulty: '電腦難度', easy: '簡單', normal: '普通', hard: '困難', winScore: '獲勝分數',
@@ -92,6 +93,7 @@ const I = {
     ht5: '每側最多連續觸球 3 次，第 4 次犯規', ht6: '球落在對方場地即得分，先拿 {n} 分獲勝', ht7: '手機：使用畫面兩側的按鈕操作　Esc / P 暫停',
   },
   en: {
+    copyLink: 'Copy invite link', shareLink: 'Share with a friend', copied: 'Invite link copied!', inviteText: 'Play Pokémon Volleyball with me! Room {code}', joiningRoom: 'Joining room {code}…',
     deuceOpt: 'Win by 2 (deuce)', deuceHud: 'DEUCE — win by 2', advHud: '{name} advantage', ht8: 'When tied near the end (e.g. 6–6), you must win by 2 points (can be turned off in Settings)',
     ...NET_STR.en, title: 'Pokémon Volleyball', subtitle: 'Fan-made practice project · non-profit', vsCpu: 'vs CPU (1P)', vs2p: '2 Players', howto: 'How to Play', settings: 'Settings',
     language: 'Language', sound: 'Sound', on: 'On', off: 'Off', difficulty: 'CPU Level', easy: 'Easy', normal: 'Normal', hard: 'Hard', winScore: 'Points to Win',
@@ -108,6 +110,7 @@ const I = {
     ht5: 'Max 3 touches per side, the 4th is a foul', ht6: 'Land the ball on the other side. First to {n} wins', ht7: 'Phone: use the on-screen buttons   Esc / P to pause',
   },
   ja: {
+    copyLink: '招待リンクをコピー', shareLink: '友達に共有', copied: '招待リンクをコピーしました！', inviteText: 'ポケモンバレーで勝負しよう！ルーム {code}', joiningRoom: 'ルーム {code} に参加中…',
     deuceOpt: 'デュース（2点差）', deuceHud: 'デュース — 2点差で勝利', advHud: '{name} アドバンテージ', ht8: '終盤で同点（例 6-6）になったら2点差をつけた方が勝ち（設定でオフ可）',
     ...NET_STR.ja, title: 'ポケモンバレー', subtitle: 'ファン制作の練習作品・非営利', vsCpu: 'CPUと対戦（1P）', vs2p: '2人で対戦', howto: '遊び方', settings: '設定',
     language: '言語', sound: 'サウンド', on: 'オン', off: 'オフ', difficulty: 'CPUの強さ', easy: 'よわい', normal: 'ふつう', hard: 'つよい', winScore: '勝利ポイント',
@@ -502,7 +505,12 @@ function menuDef() {
       { label: () => t('settings'), go: () => openSettings('pause') }, { label: () => t('quit'), go: quitToTitle }] };
     case 'online': return { y0: 150, gap: 34, items: [
       { label: () => t('createRoom'), go: netCreate }, { label: () => t('joinRoom'), go: netJoinPrompt }, { label: () => t('back'), go: () => go('title') }] };
-    case 'netwait': return { y0: 250, gap: 30, items: [{ label: () => t('cancel'), go: () => { netClose(); go('online'); } }] };
+    case 'netwait': {
+      const items = [];
+      if (net.status === 'waitJoin') { items.push({ label: () => t('copyLink'), go: netCopyInvite }); if (navigator.share) items.push({ label: () => t('shareLink'), go: netShareInvite }); }
+      items.push({ label: () => t('cancel'), go: () => { netClose(); go('online'); } });
+      return { y0: net.status === 'waitJoin' ? 222 : 250, gap: 30, items };
+    }
     case 'over': if (net.role) return { y0: 172, gap: 32, items: [
       { label: () => net.waitRm ? t('waitRematch') : t('rematch'), go: netRematch }, { label: () => t('quit'), go: quitToTitle }] };
       return { y0: 172, gap: 32, items: [
@@ -538,6 +546,18 @@ function drawMenu(def, title) {
 }
 
 // ======================= 線上對戰（WebRTC / PeerJS，房主為權威）=======================
+const toast = { s: '', t: 0 };
+function inviteURL() { return location.href.split(/[?#]/)[0] + '?room=' + net.code; }
+function copyText(str) {
+  const fallback = () => { try { const ta = document.createElement('textarea'); ta.value = str; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; } };
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(str).then(() => true, () => fallback());
+  return Promise.resolve(fallback());
+}
+function netCopyInvite() { copyText(inviteURL()).then(ok => { toast.s = ok ? t('copied') : inviteURL(); toast.t = ok ? 120 : 600; beep(700, 0.08); }); }
+function netShareInvite() {
+  const data = { title: t('title'), text: t('inviteText', { code: net.code }), url: inviteURL() };
+  if (navigator.share) navigator.share(data).catch(() => {}); else netCopyInvite();
+}
 function quitToTitle() { netClose(); go('title'); }
 function netClose() {
   clearTimeout(net.to);
@@ -570,7 +590,7 @@ function netJoinPrompt() {
   if (code.length === 4) netJoin(code);
 }
 function netJoin(code) {
-  net.err = ''; netClose(); net.role = 'guest'; net.status = 'connecting'; go('netwait');
+  net.err = ''; netClose(); net.role = 'guest'; net.status = 'connecting'; net.joinCode = code; go('netwait');
   const peer = net.peer = new Peer();
   peer.on('open', () => { if (net.peer === peer) netSetup(peer.connect('pvb-' + code, { serialization: 'json' })); });
   peer.on('error', e => { if (net.peer === peer) netFail(e.type === 'peer-unavailable' ? 'errNotFound' : 'errNet'); });
@@ -849,9 +869,10 @@ function drawOnline() {
 }
 function drawNetWait() {
   drawBackdrop(0.6); text(t('online'), W / 2, 70, 22, '#ffd23f');
-  if (net.status === 'waitJoin') { text(t('roomCode'), W / 2, 120, 14, '#ffffffcc'); text(net.code, W / 2, 175, 44, '#ffd23f'); text(t('shareCode'), W / 2, 205, 12); }
-  else text(t(net.status === 'waitPick' ? 'waitPick' : 'connecting'), W / 2, 150, 16);
+  if (net.status === 'waitJoin') { text(t('roomCode'), W / 2, 104, 13, '#ffffffcc'); text(net.code, W / 2, 152, 44, '#ffd23f'); text(t('shareCode'), W / 2, 180, 12); }
+  else text(net.joinCode && net.status === 'connecting' ? t('joiningRoom', { code: net.joinCode }) : t(net.status === 'waitPick' ? 'waitPick' : 'connecting'), W / 2, 150, 16);
   drawMenu(menuDef());
+  if (toast.t > 0) { toast.t--; ctx.globalAlpha = Math.min(1, toast.t / 20); text(toast.s, W / 2, 196, toast.s.length > 30 ? 9 : 13, '#7be06b'); ctx.globalAlpha = 1; }
 }
 function dimOverlay() { ctx.fillStyle = '#000000a0'; ctx.fillRect(0, 0, W, H); }
 
@@ -961,6 +982,12 @@ fsBtn.addEventListener('click', async () => {
 
 // ======================= 主迴圈 =======================
 applyLang();
+(function autoJoinFromURL() {   // 邀請連結 ?room=1234：開啟後直接加入該房間
+  try {
+    const q = new URLSearchParams(location.search).get('room');
+    if (q && /^\d{4}$/.test(q)) { history.replaceState(null, '', location.pathname); if (typeof Peer !== 'undefined') netJoin(q); else { net.err = 'errLib'; state = 'online'; } }
+  } catch (e) {}
+})();
 setInterval(() => { update(); netTick(); for (const k in pressed) delete pressed[k]; }, 1000 / 60);
 (function render() { draw(); requestAnimationFrame(render); })();
 setInterval(draw, 50);
