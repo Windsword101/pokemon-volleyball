@@ -1,5 +1,7 @@
 # Pokémon Volleyball（寶可夢排球）
 
+**Make by wo.FAN.H**
+
 A fan-made, non-profit practice project inspired by *Pikachu Volleyball*.
 單一 HTML 檔的像素風排球遊戲：2D、屬性技能、撲球、三語（繁中 / English / 日本語）、手機橫向觸控、線上對戰。
 

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>寶可夢排球 Pokémon Volleyball</title>
+<meta name="author" content="wo.FAN.H">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
@@ -69,6 +70,7 @@ let S = (() => { const d = { lang: guessLang(), sound: true, diff: 1, win: 7 }; 
 const net = { role: null, peer: null, conn: null, status: '', code: '', err: '', events: [], replay: false, remote: { left: false, right: false, jump: false, spike: false, skill: false }, remotePick: null, myPicked: false, hostRm: false, guestRm: false, waitRm: false, to: 0 };
 function saveS() { try { localStorage.setItem('pokevb', JSON.stringify(S)); } catch (e) {} }
 
+const CREDIT = 'Make by wo.FAN.H';
 const IS_TOUCH = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) && Math.min(screen.width, screen.height) < 1000;
 if (IS_TOUCH) document.documentElement.classList.add('touch');
 const NET_STR = {"zh":{"online":"線上對戰","createRoom":"建立房間","joinRoom":"加入房間","enterCode":"輸入 4 位數房號","roomCode":"房號","shareCode":"把房號告訴朋友，等待對方加入…","connecting":"連線中…","waitPick":"等待對手選角…","waitRematch":"等待對手同意再戰…","cancel":"取消","errNotFound":"找不到房間，請確認房號","errClosed":"對手已離線","errNet":"連線失敗（可能被防火牆擋住）","errLib":"無法載入連線元件，請確認網路","netNote":"房主為 P1（左），加入者為 P2（右）"},"en":{"online":"Online Play","createRoom":"Create Room","joinRoom":"Join Room","enterCode":"Enter the 4-digit room code","roomCode":"Room Code","shareCode":"Share this code with your friend and wait…","connecting":"Connecting…","waitPick":"Waiting for the opponent…","waitRematch":"Waiting for the opponent to accept…","cancel":"Cancel","errNotFound":"Room not found. Check the code.","errClosed":"The opponent disconnected","errNet":"Connection failed (a firewall may be blocking it)","errLib":"Could not load the networking library. Check your connection.","netNote":"Host is P1 (left), guest is P2 (right)"},"ja":{"online":"オンライン対戦","createRoom":"ルームを作る","joinRoom":"ルームに入る","enterCode":"4桁のルーム番号を入力","roomCode":"ルーム番号","shareCode":"この番号を友達に伝えて待とう…","connecting":"接続中…","waitPick":"相手を待っています…","waitRematch":"相手の返事を待っています…","cancel":"キャンセル","errNotFound":"ルームが見つかりません。番号を確認してね","errClosed":"相手が切断されました","errNet":"接続に失敗しました（ファイアウォールの可能性）","errLib":"通信ライブラリを読み込めません","netNote":"ホストは P1（左）、参加者は P2（右）"}};
@@ -778,7 +780,8 @@ function drawTitle() {
   const lr = langBtnRect(); ctx.fillStyle = '#00000080'; ctx.fillRect(lr.x, lr.y, lr.w, lr.h); ctx.strokeStyle = '#ffffff80'; ctx.lineWidth = 1; ctx.strokeRect(lr.x, lr.y, lr.w, lr.h);
   text(LANG_NAME[S.lang] + ' ▸', lr.x + lr.w / 2, lr.y + 15, 11);
   drawMenu(menuDef());
-  text(t('menuHint'), W / 2, 288, 10, '#ffffffaa');
+  text(t('menuHint'), W / 2, 280, 10, '#ffffffaa');
+  text(CREDIT, W / 2, 298, 11, '#ffd23f');
 }
 function drawSettings() { drawBackdrop(0.55); const d = menuDef(); drawMenu(d, t('settings')); text(t('menuHint'), W / 2, 288, 10, '#ffffffaa'); }
 function drawHowto() {
