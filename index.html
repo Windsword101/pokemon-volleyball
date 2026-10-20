@@ -175,7 +175,7 @@ const ballCache = {};
 function ballSprite(color) {
   if (ballCache[color]) return ballCache[color];
   const c = document.createElement('canvas'); c.width = c.height = 14; const g = c.getContext('2d');
-  const pal = { K: '#1d1a2b', R: color, W: '#ffffff', S: '#c4cbdb', H: '#ffffffaa' };
+  const pal = { K: '#1d1a2b', R: color, W: '#ffffff', S: '#c4cbdb', H: '#ffffff' };
   BALL_ART.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') { g.fillStyle = pal[ch]; g.fillRect(x, y, 1, 1); } }));
   return ballCache[color] = c;
 }
@@ -814,7 +814,11 @@ function drawPick() {
     ctx.fillStyle = '#1d1a2b'; ctx.fillRect(W - 102, y, 78, 10); ctx.fillStyle = FXCOLOR[m.id]; ctx.fillRect(W - 101, y + 1, Math.round(76 * Math.min(1, v)), 8);
   });
   const b = pickBtnRects();
-  [[b.back, t('back')], [b.ok, t('ok')]].forEach(([r, lab], i) => { ctx.fillStyle = i ? '#ffd23f' : '#ffffff30'; ctx.fillRect(r.x, r.y, r.w, r.h); text(lab, r.x + r.w / 2, r.y + 18, 13, i ? '#1d1a2b' : '#fff'); });
+  [[b.back, t('back')], [b.ok, t('ok')]].forEach(([r, lab], i) => {
+    ctx.fillStyle = i ? '#ffd23f' : '#ffffff30'; ctx.fillRect(r.x, r.y, r.w, r.h);
+    if (i) { ctx.font = `14px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = '#1d1a2b'; ctx.fillText(lab, r.x + r.w / 2, r.y + 18); }   // 黃底深字：不加描邊，否則會糊成一團
+    else text(lab, r.x + r.w / 2, r.y + 18, 13);
+  });
   text(t('pickHint'), W / 2, 288, 10, '#ffffffaa');
 }
 function drawIntro() {
