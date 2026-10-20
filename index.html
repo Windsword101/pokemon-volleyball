@@ -83,6 +83,7 @@ const I = {
   zh: {
     copyLink: '複製邀請連結', shareLink: '分享給朋友', copied: '已複製邀請連結！', inviteText: '一起來打寶可夢排球！房號 {code}', joiningRoom: '正在加入房間 {code}…',
     pImmune: '免疫！', pFlinch: '震退！', unlockHidden: '★ 隱藏角色解鎖：{name}！',
+    master: '大師',
     musicOpt: '音樂音量', tapMusic: '點一下畫面開啟音樂',
     deuceOpt: '平手需連得兩分', deuceHud: '平手　需連得兩分才贏', advHud: '{name} 賽末點', ht8: '平手（如 6:6）後，需領先 2 分才算獲勝（可在設定關閉）',
     ...NET_STR.zh, title: '寶可夢排球', subtitle: '粉絲同人練習作品・非營利', vsCpu: '單人　對電腦', vs2p: '雙人　對戰', howto: '玩法說明', settings: '設定',
@@ -102,6 +103,7 @@ const I = {
   en: {
     copyLink: 'Copy invite link', shareLink: 'Share with a friend', copied: 'Invite link copied!', inviteText: 'Play Pokémon Volleyball with me! Room {code}', joiningRoom: 'Joining room {code}…',
     pImmune: 'Immune!', pFlinch: 'Knocked back!', unlockHidden: '★ Hidden Pokémon unlocked: {name}!',
+    master: 'Master',
     musicOpt: 'Music', tapMusic: 'Tap anywhere to start the music',
     deuceOpt: 'Win by 2 (deuce)', deuceHud: 'DEUCE — win by 2', advHud: '{name} advantage', ht8: 'When tied near the end (e.g. 6–6), you must win by 2 points (can be turned off in Settings)',
     ...NET_STR.en, title: 'Pokémon Volleyball', subtitle: 'Fan-made practice project · non-profit', vsCpu: 'vs CPU (1P)', vs2p: '2 Players', howto: 'How to Play', settings: 'Settings',
@@ -121,6 +123,7 @@ const I = {
   ja: {
     copyLink: '招待リンクをコピー', shareLink: '友達に共有', copied: '招待リンクをコピーしました！', inviteText: 'ポケモンバレーで勝負しよう！ルーム {code}', joiningRoom: 'ルーム {code} に参加中…',
     pImmune: 'こうかなし！', pFlinch: 'ふきとんだ！', unlockHidden: '★ かくしキャラ解放：{name}！',
+    master: 'マスター',
     musicOpt: 'BGM音量', tapMusic: '画面をタップで音楽スタート',
     deuceOpt: 'デュース（2点差）', deuceHud: 'デュース — 2点差で勝利', advHud: '{name} アドバンテージ', ht8: '終盤で同点（例 6-6）になったら2点差をつけた方が勝ち（設定でオフ可）',
     ...NET_STR.ja, title: 'ポケモンバレー', subtitle: 'ファン制作の練習作品・非営利', vsCpu: 'CPUと対戦（1P）', vs2p: '2人で対戦', howto: '遊び方', settings: '設定',
@@ -173,9 +176,10 @@ const monK = m => m.k || SPRITE_K;
 const nMons = () => S.onix ? MONS.length : MONS.length - 1;
 const FXCOLOR = { rock: '#c9b79c', elec: '#ffe84a', water: '#5ab8ff', fire: '#ff6a2a', grass: '#7be06b' };
 const AI_LEVELS = [
-  { every: 12, err: 40, jump: 0.06, dive: 0.2, skill: 0.12, speed: 0.8 },
-  { every: 6, err: 20, jump: 0.12, dive: 0.5, skill: 0.25, speed: 1 },
-  { every: 3, err: 6, jump: 0.25, dive: 0.8, skill: 0.5, speed: 1.05 },
+  { every: 12, err: 40, jump: 0.15, dive: 0.1, skill: 0.12, speed: 0.8, smash: 0.25, lead: 0.2 },
+  { every: 6, err: 16, jump: 0.4, dive: 0.25, skill: 0.3, speed: 1, smash: 0.5, lead: 0.5 },
+  { every: 3, err: 6, jump: 0.7, dive: 0.5, skill: 0.6, speed: 1.05, smash: 0.8, lead: 0.8 },
+  { every: 1, err: 0, jump: 0.95, dive: 0.9, skill: 0.9, speed: 1.3, smash: 1, lead: 1 },
 ];
 const WIN_OPTS = [5, 7, 11, 15];
 
@@ -380,31 +384,43 @@ function popup(key, x, y, color = '#fff') {   // key: 字串表的 key / 'sk:<�
 }
 
 // ======================= AI =======================
-function predictLanding(b) {
-  let x = b.x, y = b.y, vx = b.vx, vy = b.vy;
+// 依球種重力預測軌跡：回傳球落地點 landX、經過「可跳擊高度」時的 hitX、落地所需幀數 t
+const BALL_G = { fire: 0.06, water: 0.4, rock: 0.15, elec: 0.15, grass: 0.05 };
+function predictBall(b, hitY) {
+  let x = b.x, y = b.y, vx = b.vx, vy = b.vy, hitX = null;
+  const g = BALL_G[b.fx] || 0.25;
   for (let i = 0; i < 400; i++) {
-    vy += 0.25; x += vx; y += vy;
+    vy += g; x += vx; y += vy;
     if (x < BR || x > W - BR) vx = -vx;
-    if (y >= GROUND - BR) return x;
+    if (hitX === null && vy > 0 && y >= hitY) hitX = x;
+    if (y >= GROUND - BR) return { landX: x, hitX: hitX === null ? x : hitX, t: i };
   }
-  return x;
+  return { landX: x, hitX: x, t: 400 };
 }
+// 扣殺（水平 15、向下 9）飛到網前時要高於網頂才不會掛網
+function spikeClearsNet(bx, by) { const t = Math.abs(bx - NET_X) / 15; return by + 9 * t + 0.125 * t * t < NET_TOP - BR - 4; }
 function aiInput(p) {
   const inp = { ...NOINPUT }, c = p.aiCfg;
   if (state !== 'play') return inp;
+  const dx = ball.x - p.x, dy = ball.y - p.y, dist = Math.hypot(dx, dy), reach = p.r + BR;
+  const onMySide = ball.x > NET_X, incoming = onMySide || ball.vx > 0.5;
+  // 1) 站位：接球時站到「球會經過可跳擊高度」的位置，並稍微站在球右側，讓擊出的球斜向對手場地；沒球時回中場
   if (frame % c.every === 0) {
-    const incoming = ball.x > NET_X - 20 || ball.vx > 0.5;
-    p.aiTarget = incoming ? predictLanding(ball) + (Math.random() - 0.5) * c.err + (ball.x > NET_X ? 8 : 0) : W * 0.78;
+    if (incoming) {
+      const pr = predictBall(ball, GROUND - 105), base = pr.t < 10 ? pr.landX : pr.hitX;
+      p.aiTarget = base + 5 + 12 * c.lead + (Math.random() - 0.5) * c.err;
+    } else p.aiTarget = W * 0.76 + (Math.random() - 0.5) * c.err;
     p.aiTarget = Math.max(NET_X + NET_W / 2 + p.r, Math.min(W - p.r, p.aiTarget));
   }
-  if (p.x < p.aiTarget - 6) inp.right = true; else if (p.x > p.aiTarget + 6) inp.left = true;
-  const dx = ball.x - p.x, dy = ball.y - p.y;
-  if (ball.x > NET_X && p.onGround && Math.abs(dx) < 70 && dy < -20 && dy > -150 && ball.vy > -2 && Math.random() < c.jump) inp.jump = true;
-  if (Math.hypot(dx, dy) < p.r + BR + 22) {
-    if (!p.onGround && Math.random() < 0.4) inp.spike = true;
-    if (p.energy >= 100 && Math.random() < c.skill) inp.skill = true;
-  }
-  if (p.onGround && ball.x > NET_X && ball.y > GROUND - 70 && ball.vy > 0 && Math.abs(dx) > 38 && Math.abs(dx) < 95 && Math.random() < c.dive) {
+  const dead = c.every <= 3 ? 3 : 6;
+  if (p.x < p.aiTarget - dead) inp.right = true; else if (p.x > p.aiTarget + dead) inp.left = true;
+  // 2) 起跳：球在頭上、正在下落、水平距離夠近
+  if (p.onGround && incoming && Math.abs(dx) < 46 && dy < -34 && dy > -170 && ball.vy > -1 && Math.random() < c.jump) inp.jump = true;
+  // 3) 空中扣殺 / 施放技能
+  if (!p.onGround && dist < reach + 16 && dy <= 14 && spikeClearsNet(ball.x, ball.y) && Math.random() < c.smash) inp.spike = true;
+  if (p.energy >= 100 && dist < reach + 22 && Math.random() < c.skill) inp.skill = true;
+  // 4) 低球 → 撲球救球
+  if (p.onGround && onMySide && ball.y > GROUND - 85 && ball.vy > 0 && Math.abs(dx) > reach - 6 && Math.abs(dx) < reach + 70 && Math.random() < c.dive * 0.6) {
     inp.spike = true; inp.left = dx < 0; inp.right = dx > 0;
   }
   return inp;
@@ -581,7 +597,7 @@ function menuDefRaw() {
       { label: () => t('language'), val: () => LANG_NAME[S.lang], adj: d => cycleLang(d) },
       { label: () => t('sound'), val: () => t(S.sound ? 'on' : 'off'), adj: () => { S.sound = !S.sound; saveS(); } },
       { label: () => t('musicOpt'), val: () => S.music ? S.music + '%' : t('off'), adj: d => { S.music = Math.max(0, Math.min(100, S.music + d * 10)); saveS(); unlockBgm(); } },
-      { label: () => t('difficulty'), val: () => t(['easy', 'normal', 'hard'][S.diff]), adj: d => { S.diff = (S.diff + d + 3) % 3; saveS(); } },
+      { label: () => t('difficulty'), val: () => t(['easy', 'normal', 'hard', 'master'][S.diff]), adj: d => { S.diff = (S.diff + d + 4) % 4; saveS(); } },
       { label: () => t('winScore'), val: () => S.win, adj: d => cycleWin(d) },
       { label: () => t('deuceOpt'), val: () => t(S.deuce ? 'on' : 'off'), adj: () => { S.deuce = !S.deuce; saveS(); } },
       { label: () => t('back'), go: closeSettings }] };
