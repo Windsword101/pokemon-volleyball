@@ -964,6 +964,13 @@ function toLogical(e) {
   if (IS_TOUCH && portraitMQ.matches) return [(e.clientY - r.top) / r.height * W, (r.right - e.clientX) / r.width * H];   // 版面旋轉 90°
   return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H];
 }
+// 選項列「◀ 值 ▶」：點 ◀ 那半＝減少、點 ▶ 那半＝增加；點左邊文字區＝往前一格
+function optionDir(it, r, x) {
+  ctx.font = `14px ${FONT}`;
+  const wv = ctx.measureText(`◀ ${it.val()} ▶`).width, start = r.x + r.w - 10 - wv;
+  if (x < start) return 1;
+  return x < start + wv / 2 ? -1 : 1;
+}
 function itemAt(def, x, y) { for (let i = 0; i < def.items.length; i++) if (inRect(x, y, itemRect(def, i))) return i; return -1; }
 cv.addEventListener('pointermove', e => {
   if (e.pointerType !== 'mouse') return;
@@ -976,7 +983,7 @@ cv.addEventListener('pointerdown', e => {
   if (def) {
     if (state === 'over' && overT > 0) return;
     const i = itemAt(def, x, y);
-    if (i >= 0) { focus = i; const it = def.items[i], r = itemRect(def, i); activate(it, it.adj && x < r.x + r.w * 0.4 ? -1 : 1); }
+    if (i >= 0) { focus = i; const it = def.items[i], r = itemRect(def, i); activate(it, it.adj ? optionDir(it, r, x) : 1); }
     return;
   }
   if (state === 'pick') {
