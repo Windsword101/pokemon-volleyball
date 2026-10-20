@@ -77,7 +77,7 @@ const NET_STR = {"zh":{"online":"線上對戰","createRoom":"建立房間","join
 const I = {
   zh: {
     copyLink: '複製邀請連結', shareLink: '分享給朋友', copied: '已複製邀請連結！', inviteText: '一起來打寶可夢排球！房號 {code}', joiningRoom: '正在加入房間 {code}…',
-    musicOpt: '音樂音量',
+    musicOpt: '音樂音量', tapMusic: '點一下畫面開啟音樂',
     deuceOpt: '平手需連得兩分', deuceHud: '平手　需連得兩分才贏', advHud: '{name} 賽末點', ht8: '平手（如 6:6）後，需領先 2 分才算獲勝（可在設定關閉）',
     ...NET_STR.zh, title: '寶可夢排球', subtitle: '粉絲同人練習作品・非營利', vsCpu: '單人　對電腦', vs2p: '雙人　對戰', howto: '玩法說明', settings: '設定',
     language: '語言', sound: '音效', on: '開', off: '關', difficulty: '電腦難度', easy: '簡單', normal: '普通', hard: '困難', winScore: '獲勝分數',
@@ -95,7 +95,7 @@ const I = {
   },
   en: {
     copyLink: 'Copy invite link', shareLink: 'Share with a friend', copied: 'Invite link copied!', inviteText: 'Play Pokémon Volleyball with me! Room {code}', joiningRoom: 'Joining room {code}…',
-    musicOpt: 'Music',
+    musicOpt: 'Music', tapMusic: 'Tap anywhere to start the music',
     deuceOpt: 'Win by 2 (deuce)', deuceHud: 'DEUCE — win by 2', advHud: '{name} advantage', ht8: 'When tied near the end (e.g. 6–6), you must win by 2 points (can be turned off in Settings)',
     ...NET_STR.en, title: 'Pokémon Volleyball', subtitle: 'Fan-made practice project · non-profit', vsCpu: 'vs CPU (1P)', vs2p: '2 Players', howto: 'How to Play', settings: 'Settings',
     language: 'Language', sound: 'Sound', on: 'On', off: 'Off', difficulty: 'CPU Level', easy: 'Easy', normal: 'Normal', hard: 'Hard', winScore: 'Points to Win',
@@ -113,7 +113,7 @@ const I = {
   },
   ja: {
     copyLink: '招待リンクをコピー', shareLink: '友達に共有', copied: '招待リンクをコピーしました！', inviteText: 'ポケモンバレーで勝負しよう！ルーム {code}', joiningRoom: 'ルーム {code} に参加中…',
-    musicOpt: 'BGM音量',
+    musicOpt: 'BGM音量', tapMusic: '画面をタップで音楽スタート',
     deuceOpt: 'デュース（2点差）', deuceHud: 'デュース — 2点差で勝利', advHud: '{name} アドバンテージ', ht8: '終盤で同点（例 6-6）になったら2点差をつけた方が勝ち（設定でオフ可）',
     ...NET_STR.ja, title: 'ポケモンバレー', subtitle: 'ファン制作の練習作品・非営利', vsCpu: 'CPUと対戦（1P）', vs2p: '2人で対戦', howto: '遊び方', settings: '設定',
     language: '言語', sound: 'サウンド', on: 'オン', off: 'オフ', difficulty: 'CPUの強さ', easy: 'よわい', normal: 'ふつう', hard: 'つよい', winScore: '勝利ポイント',
@@ -240,12 +240,16 @@ window.addEventListener('pointerdown', () => { try { if (screen.orientation && s
 // 兩首：bgm = 平常（選單/比賽前半）；bgmB = 對戰（任一方拿到 5 分後；比賽結束回到 bgm）
 const mkAudio = src => { const a = new Audio(src); a.loop = true; a.preload = 'auto'; a.volume = 0; return a; };
 const bgm = mkAudio('assets/bgm.mp3'), bgmB = mkAudio('assets/bgm_battle.mp3');
-let bgmUnlocked = false;
-function unlockBgm() {
-  if (bgmUnlocked) return; bgmUnlocked = true;
-  try { const p = bgm.play(); if (p && p.catch) p.catch(() => { bgmUnlocked = false; }); } catch (e) { bgmUnlocked = false; }
+let bgmUnlocked = false, bgmTrying = false;
+function unlockBgm() {   // 瀏覽器限制：要使用者操作後才能出聲；play() 成功才算解鎖，失敗會在下一次操作重試
+  if (bgmUnlocked || bgmTrying) return; bgmTrying = true;
+  try {
+    const p = bgm.play();
+    if (p && p.then) p.then(() => { bgmUnlocked = true; bgmTrying = false; }, () => { bgmTrying = false; });
+    else { bgmUnlocked = true; bgmTrying = false; }
+  } catch (e) { bgmTrying = false; }
 }
-['pointerdown', 'keydown', 'touchend'].forEach(ev => window.addEventListener(ev, unlockBgm, { passive: true }));
+['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'keydown', 'touchstart', 'touchend'].forEach(ev => window.addEventListener(ev, unlockBgm, { passive: true }));
 const BATTLE_AT = 5;
 function wantBattle() {
   const inMatch = state === 'play' || state === 'point' || state === 'pause' || (state === 'settings' && settingsReturn === 'pause');
@@ -843,6 +847,7 @@ function drawTitle() {
   const lr = langBtnRect(); ctx.fillStyle = '#00000080'; ctx.fillRect(lr.x, lr.y, lr.w, lr.h); ctx.strokeStyle = '#ffffff80'; ctx.lineWidth = 1; ctx.strokeRect(lr.x, lr.y, lr.w, lr.h);
   text(LANG_NAME[S.lang] + ' ▸', lr.x + lr.w / 2, lr.y + 15, 11);
   drawMenu(menuDef());
+  if (!bgmUnlocked && S.music > 0 && frame % 80 < 56) text('♪ ' + t('tapMusic'), 8, 20, 10, '#ffd23f', 'left');   // 提醒：點一下才會出聲
   text(t('menuHint'), W / 2, 280, 10, '#ffffffaa');
   text(CREDIT, W / 2, 298, 11, '#ffd23f');
 }
