@@ -899,17 +899,8 @@ function labelOf(i) {
   if (mode === 1) return i === 0 ? 'P1' : t('cpu');
   return 'P' + (i + 1);
 }
-function drawTag(str, cx, y, col, size = 9) {   // 圓角小標籤 + 向下箭頭
-  ctx.font = `${size}px ${FONT}`; const w = Math.ceil(ctx.measureText(str).width) + 10, h = size + 5;
-  const x = Math.max(w / 2 + 2, Math.min(W - w / 2 - 2, cx)), top = Math.max(2, y - h);
-  ctx.fillStyle = '#1d1a2b'; ctx.fillRect(Math.round(x - w / 2) - 1, top - 1, w + 2, h + 2);
-  ctx.fillStyle = col; ctx.fillRect(Math.round(x - w / 2), top, w, h);
-  ctx.beginPath(); ctx.moveTo(cx - 4, top + h); ctx.lineTo(cx + 4, top + h); ctx.lineTo(cx, top + h + 5); ctx.closePath(); ctx.fillStyle = col; ctx.fill();
-  ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText(str, x, top + h - 4);
-}
 function drawMon(p) {
   const id = p.mon.id, feet = p.y + p.r + 3 - (p.mon.hover && p.onGround ? 7 + Math.sin(frame * 0.1 + p.side) * 2.5 : 0), air = (GROUND - p.r - p.y) / 130;
-  ctx.fillStyle = PCOL[p.side] + '88'; ctx.beginPath(); ctx.ellipse(p.x, GROUND + 4, p.r * 1.08 - air * 8, 7.5 - air * 2, 0, 0, 6.283); ctx.fill();   // 底色圈
   ctx.fillStyle = '#00000040'; ctx.beginPath(); ctx.ellipse(p.x, GROUND + 3, p.r * 0.93 - air * 8, 5 - air * 1.5, 0, 0, 6.283); ctx.fill();
   let sx = 1, sy = 1, rot = 0;
   if (p.landT > 0) { sy = 0.85; sx = 1.1; }
@@ -920,8 +911,6 @@ function drawMon(p) {
   if (p.stun > 0 && frame % 4 < 2) ctx.globalAlpha = 0.55;
   drawSprite(id, p.x, feet, monK(p.mon), p.face, rot, sx, sy);
   ctx.globalAlpha = 1;
-  { const im = IMGS[id], hs = im && im.naturalHeight ? im.naturalHeight * monK(p.mon) * sy : 60;   // 頭上標籤
-    const ty = (rot ? p.y - p.r - 20 : feet - hs - 7) - Math.sin(frame * 0.12 + p.side) * 1.5; drawTag(labelOf(p.side), p.x, Math.round(ty), PCOL[p.side]); }
   if (p.stun > 0) { ctx.fillStyle = '#ffe84a'; for (let i = 0; i < 3; i++) { const a = frame * 0.2 + i * 2.1; ctx.fillRect(Math.round(p.x + Math.cos(a) * 20), Math.round(p.y - 30 + Math.sin(a) * 6), 4, 4); } }
   if (p.spikeT > 0 || p.skillT > 0) {
     ctx.strokeStyle = p.skillT > 0 ? FXCOLOR[id] : '#fff'; ctx.lineWidth = 3; ctx.globalAlpha = 0.8;
