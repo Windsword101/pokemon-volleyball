@@ -38,7 +38,7 @@
   html.touch #app{position:fixed;top:0;left:0;width:100vw;width:100dvw;height:100vh;height:100dvh;display:block;overflow:hidden}
   html.touch canvas{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:0;box-shadow:none;
     width:min(100vw,calc(100vh*1.4210));width:min(100dvw,calc(100dvh*1.4210))}
-  html.touch .pad{display:flex;position:absolute;bottom:max(8px,env(safe-area-inset-bottom));z-index:3;visibility:hidden;opacity:.6;--s:clamp(46px,17vh,76px);--s:clamp(46px,17dvh,76px)}
+  html.touch .pad{display:flex;position:absolute;bottom:max(8px,env(safe-area-inset-bottom));z-index:3;visibility:hidden;opacity:.6;--s:clamp(54px,21vh,92px);--s:clamp(54px,21dvh,92px)}
   html.touch #padL{left:max(10px,env(safe-area-inset-left))} html.touch #padR{right:max(10px,env(safe-area-inset-right))}
   html.touch body[data-game="1"] .pad, body[data-game="1"] html.touch .pad{visibility:visible}
   html.touch .grp{gap:calc(var(--s)*.14)}
@@ -51,19 +51,19 @@
   body[data-game="1"] .pad{visibility:visible}
   /* 虛擬搖桿（只有左右）：在左半邊按住就出現，往左右拖就是移動；拖太遠搖桿會跟著手指 */
   html.touch body[data-game="1"][data-joy="1"] #joyZone{display:block;position:absolute;left:0;bottom:0;width:46%;height:74%;z-index:2;touch-action:none}
-  .joy-rest,.joy-pill{position:absolute;width:150px;height:46px;border-radius:23px;background:#ffffff1a;border:2px solid #ffffff55;box-sizing:border-box;pointer-events:none}
-  .joy-rest{left:max(18px,env(safe-area-inset-left));bottom:30px;opacity:.55}
+  .joy-rest,.joy-pill{position:absolute;width:210px;height:68px;border-radius:34px;background:#ffffff1a;border:2px solid #ffffff55;box-sizing:border-box;pointer-events:none}
+  .joy-rest{left:72px;bottom:44px;opacity:.6}
   .joy-pill{opacity:0}
   .joy-pill.on{opacity:.95}
-  .joy-rest::after{content:"◀  ▶";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:12px system-ui;color:#fff;letter-spacing:34px;text-indent:34px;opacity:.7}
-  .joy-knob{position:absolute;left:50%;top:50%;width:42px;height:42px;margin:-21px 0 0 -21px;border-radius:50%;background:#ffffffe0;box-shadow:0 2px 6px #0007}
+  .joy-rest::after{content:"◀  ▶";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:18px system-ui;color:#fff;letter-spacing:70px;text-indent:70px;opacity:.75}
+  .joy-knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:#ffffffe0;box-shadow:0 2px 6px #0007}
   html.touch #joyZone.touching .joy-rest{opacity:0}
   html.touch #toast.show{display:block;position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:9;max-width:80%;padding:8px 12px;border-radius:10px;background:#000c;border:1px solid #fff5;font:13px/1.4 system-ui,"Microsoft JhengHei","Hiragino Sans",sans-serif;text-align:center}
   /* 手機直拿時：把整個畫面旋轉 90° 變成橫向版面（不需要使用者轉手機）*/
   @media (orientation:portrait){
     html.touch #app{left:100vw;left:100dvw;width:100vh;width:100dvh;height:100vw;height:100dvw;transform-origin:top left;transform:rotate(90deg)}
     html.touch canvas{width:min(100vh,calc(100vw*1.4210));width:min(100dvh,calc(100dvw*1.4210))}
-    html.touch .pad{--s:clamp(46px,17vw,76px);--s:clamp(46px,17dvw,76px)}
+    html.touch .pad{--s:clamp(54px,21vw,92px);--s:clamp(54px,21dvw,92px)}
     html.touch #fs{top:auto;bottom:8px}
   }
 </style>
@@ -1215,7 +1215,7 @@ const joyZone = document.getElementById('joyZone');
 const joyPill = document.createElement('div'); joyPill.className = 'joy-pill';
 const joyKnob = document.createElement('div'); joyKnob.className = 'joy-knob'; joyPill.appendChild(joyKnob); joyZone.appendChild(joyPill);
 let joyId = null, joyOx = 0, joyDir = 0;
-const JOY_W = 150, JOY_R = 48, JOY_DEAD = 12;
+const JOY_W = 210, JOY_R = 68, JOY_DEAD = 14;
 function frameXY(e, el) {   // 指標位置換成「元素自己的座標」（手機直拿時整個畫面旋轉了 90°）
   const r = el.getBoundingClientRect();
   return IS_TOUCH && portraitMQ.matches ? [e.clientY - r.top, r.right - e.clientX] : [e.clientX - r.left, e.clientY - r.top];
@@ -1225,7 +1225,7 @@ joyZone.addEventListener('pointerdown', e => {
   if (joyId !== null) return; e.preventDefault(); joyId = e.pointerId;
   try { joyZone.setPointerCapture(joyId); } catch (_) {}
   const [x, y] = frameXY(e, joyZone); joyOx = x;
-  joyPill.style.left = (x - JOY_W / 2) + 'px'; joyPill.style.top = (y - 23) + 'px'; joyKnob.style.transform = 'translateX(0)';
+  joyPill.style.left = (x - JOY_W / 2) + 'px'; joyPill.style.top = (y - 34) + 'px'; joyKnob.style.transform = 'translateX(0)';
   joyPill.classList.add('on'); joyZone.classList.add('touching');
 });
 joyZone.addEventListener('pointermove', e => {
