@@ -55,7 +55,12 @@
   .joy-rest{left:72px;bottom:44px;opacity:.6}
   .joy-pill{opacity:0}
   .joy-pill.on{opacity:.95}
-  .joy-rest::after{content:"◀  ▶";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:18px system-ui;color:#fff;letter-spacing:70px;text-indent:70px;opacity:.75}
+  .joy-rest,.joy-pill{display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+  .joy-arrow{width:0;height:0;border-top:11px solid transparent;border-bottom:11px solid transparent;opacity:.55;transition:opacity .08s}
+  .joy-arrow.l{border-right:17px solid #fff}
+  .joy-arrow.r{border-left:17px solid #fff}
+  .joy-arrow.act{opacity:1;filter:drop-shadow(0 0 4px #ffd23f)}
+  .joy-rest::before{content:"";position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:#ffffff38;border:2px solid #ffffff66;box-sizing:border-box}
   .joy-knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:#ffffffe0;box-shadow:0 2px 6px #0007}
   html.touch #joyZone.touching .joy-rest{opacity:0}
   html.touch #toast.show{display:block;position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:9;max-width:80%;padding:8px 12px;border-radius:10px;background:#000c;border:1px solid #fff5;font:13px/1.4 system-ui,"Microsoft JhengHei","Hiragino Sans",sans-serif;text-align:center}
@@ -1213,14 +1218,17 @@ function buildPads() {
 // ======================= 虛擬搖桿（只有左右）=======================
 const joyZone = document.getElementById('joyZone');
 const joyPill = document.createElement('div'); joyPill.className = 'joy-pill';
-const joyKnob = document.createElement('div'); joyKnob.className = 'joy-knob'; joyPill.appendChild(joyKnob); joyZone.appendChild(joyPill);
+const arrow = c => { const a = document.createElement('span'); a.className = 'joy-arrow ' + c; return a; };
+const pillL = arrow('l'), pillR = arrow('r'), joyKnob = document.createElement('div'); joyKnob.className = 'joy-knob';
+joyPill.append(pillL, pillR, joyKnob); joyZone.appendChild(joyPill);
+joyZone.querySelector('.joy-rest').append(arrow('l'), arrow('r'));
 let joyId = null, joyOx = 0, joyDir = 0;
 const JOY_W = 210, JOY_R = 68, JOY_DEAD = 14;
 function frameXY(e, el) {   // 指標位置換成「元素自己的座標」（手機直拿時整個畫面旋轉了 90°）
   const r = el.getBoundingClientRect();
   return IS_TOUCH && portraitMQ.matches ? [e.clientY - r.top, r.right - e.clientX] : [e.clientX - r.left, e.clientY - r.top];
 }
-function joySet(dir) { if (dir === joyDir) return; setKey(0, 'left', dir < 0); setKey(0, 'right', dir > 0); joyDir = dir; }
+function joySet(dir) { pillL.classList.toggle('act', dir < 0); pillR.classList.toggle('act', dir > 0); if (dir === joyDir) return; setKey(0, 'left', dir < 0); setKey(0, 'right', dir > 0); joyDir = dir; }
 joyZone.addEventListener('pointerdown', e => {
   if (joyId !== null) return; e.preventDefault(); joyId = e.pointerId;
   try { joyZone.setPointerCapture(joyId); } catch (_) {}
