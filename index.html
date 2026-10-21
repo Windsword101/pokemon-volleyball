@@ -30,7 +30,7 @@
   html.touch #app{position:fixed;top:0;left:0;width:100vw;width:100dvw;height:100vh;height:100dvh;display:block;overflow:hidden}
   html.touch canvas{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:0;box-shadow:none;
     width:min(100vw,calc(100vh*1.4210));width:min(100dvw,calc(100dvh*1.4210))}
-  html.touch .pad{display:flex;position:absolute;bottom:max(8px,env(safe-area-inset-bottom));z-index:3;visibility:hidden;opacity:.88;--s:clamp(46px,17vh,76px);--s:clamp(46px,17dvh,76px)}
+  html.touch .pad{display:flex;position:absolute;bottom:max(8px,env(safe-area-inset-bottom));z-index:3;visibility:hidden;opacity:.6;--s:clamp(46px,17vh,76px);--s:clamp(46px,17dvh,76px)}
   html.touch #padL{left:max(10px,env(safe-area-inset-left))} html.touch #padR{right:max(10px,env(safe-area-inset-right))}
   html.touch body[data-game="1"] .pad, body[data-game="1"] html.touch .pad{visibility:visible}
   html.touch .grp{gap:calc(var(--s)*.14)}
@@ -553,7 +553,7 @@ function hitBall(p) {
   if (ball.fx === 'elec' && ball.owner !== p.side && p.mon.id === 'rock') { burst(p.x, p.y, FXCOLOR.rock, 14, 3); popup('pImmune', p.x, p.y - 56, FXCOLOR.rock); beep(200, 0.1, 'triangle', 0.06); }
   else if (ball.fx === 'elec' && ball.owner !== p.side) { p.stun = 70; burst(p.x, p.y, FXCOLOR.elec, 24, 4); shake = 8; hitstop = 6; popup('pPara', p.x, p.y - 44, FXCOLOR.elec); beep(150, 0.3, 'sawtooth', 0.08, -80); }
   if (ball.fx === 'water' && ball.owner !== p.side) { p.slow = 120; burst(p.x, p.y, FXCOLOR.water, 20, 3); popup('pWet', p.x, p.y - 44, FXCOLOR.water); }
-  if (ball.fx === 'rock' && ball.owner !== p.side) { p.recover = 26; p.x += (p.side === 0 ? -1 : 1) * 36; shake = 9; hitstop = 5; burst(p.x, p.y, FXCOLOR.rock, 22, 4); popup('pFlinch', p.x, p.y - 56, FXCOLOR.rock); beep(120, 0.25, 'sawtooth', 0.08, -40); }
+  if (ball.fx === 'rock' && ball.owner !== p.side) { p.recover = 26; p.x += (p.side === 0 ? -1 : 1) * 36; p.x = p.side === 0 ? Math.max(p.r, p.x) : Math.min(W - p.r, p.x); shake = 9; hitstop = 5; burst(p.x, p.y, FXCOLOR.rock, 22, 4); popup('pFlinch', p.x, p.y - 56, FXCOLOR.rock); beep(120, 0.25, 'sawtooth', 0.08, -40); }
   ball.fx = null; ball.owner = p.side; ball.psyT = 0;
   if (p.skillT > 0) {
     const id = skillOf(p); ball.fx = id; p.skillT = 0; p.energy = 0; shake = 10; hitstop = 8;
@@ -728,10 +728,43 @@ function netCreate() {
   peer.on('connection', c => { if (net.conn) { c.close(); return; } netSetup(c); });
   peer.on('error', e => { if (net.peer !== peer) return; if (e.type === 'unavailable-id') { net.peer = null; try { peer.destroy(); } catch (_) {} netCreate(); } else netFail('errNet'); });
 }
+let joinBuf = '';
 function netJoinPrompt() {
   if (typeof Peer === 'undefined') { net.err = 'errLib'; return; }
-  const code = (prompt(t('enterCode')) || '').replace(/\D/g, '').slice(0, 4);
-  if (code.length === 4) netJoin(code);
+  joinBuf = ''; go('join');
+}
+function joinPress(ch) {
+  if (ch === 'del') joinBuf = joinBuf.slice(0, -1);
+  else if (ch === 'ok') { if (joinBuf.length === 4) netJoin(joinBuf); return; }
+  else if (/^\d$/.test(ch) && joinBuf.length < 4) joinBuf += ch;
+  beep(520, 0.04);
+  if (joinBuf.length === 4 && ch !== 'del') setTimeout(() => { if (state === 'join' && joinBuf.length === 4) netJoin(joinBuf); }, 250);   // 輸滿 4 碼自動加入
+}
+function joinKeyRects() {   // 數字鍵盤：兩列 5 鍵 + 底列 [⌫][加入][返回]
+  const r = [];
+  '1234567890'.split('').forEach((d, i) => r.push({ id: d, label: d, x: 216 + (i % 5 - 2) * 62 - 26, y: 128 + Math.floor(i / 5) * 42, w: 52, h: 36 }));
+  r.push({ id: 'del', label: '⌫', x: 216 - 150 - 46, y: 222, w: 92, h: 36 }, { id: 'ok', label: t('ok'), x: 216 - 46, y: 222, w: 92, h: 36 }, { id: 'back', label: t('back'), x: 216 + 150 - 46, y: 222, w: 92, h: 36 });
+  return r;
+}
+function joinKeys() {
+  for (const d of '0123456789') if (pressed[d]) joinPress(d);
+  if (pressed['Backspace']) joinPress('del');
+  if (pressed['Enter']) joinPress('ok');
+  if (pressed['Escape']) go('online');
+}
+function drawJoin() {
+  drawBackdrop(0.6); text(t('joinRoom'), W / 2, 56, 22, '#ffd23f'); text(t('enterCode'), W / 2, 80, 12, '#ffffffcc');
+  for (let i = 0; i < 4; i++) {
+    const x = W / 2 + (i - 1.5) * 52 - 22; ctx.fillStyle = '#00000080'; ctx.fillRect(x, 90, 44, 30);
+    ctx.strokeStyle = i === joinBuf.length ? '#ffd23f' : '#ffffff80'; ctx.lineWidth = 2; ctx.strokeRect(x, 90, 44, 30);
+    if (joinBuf[i]) text(joinBuf[i], x + 22, 114, 22);
+  }
+  joinKeyRects().forEach(k => {
+    const ok = k.id === 'ok' && joinBuf.length === 4;
+    ctx.fillStyle = k.id === 'ok' ? (ok ? '#ffd23f' : '#ffd23f55') : '#ffffff2e'; ctx.fillRect(k.x, k.y, k.w, k.h);
+    if (k.id === 'ok') { ctx.font = `15px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = '#1d1a2b'; ctx.fillText(k.label, k.x + k.w / 2, k.y + 24); }
+    else text(k.label, k.x + k.w / 2, k.y + 24, 15);
+  });
 }
 function netJoin(code) {
   net.err = ''; netClose(); net.role = 'guest'; net.status = 'connecting'; net.joinCode = code; go('netwait');
@@ -799,6 +832,7 @@ function update() {
   bgmTick();
   const g = (state === 'play' || state === 'point' || state === 'over' || state === 'pause') ? '1' : '0';
   if (document.body.dataset.game !== g) document.body.dataset.game = g;
+  if (state === 'join') { joinKeys(); return; }
   const def = menuDef();
   if (net.role === 'guest' && (state === 'play' || state === 'point' || state === 'over')) {   // 訪客：只送出輸入，畫面由房主快照決定
     if (state === 'over' && def) { if (overT > 0) overT--; else menuKeys(def); }
@@ -1010,14 +1044,16 @@ function drawPick() {
   });
   if (!IS_TOUCH) text(t('pickHint'), W / 2, 288, 10, '#ffffffaa');
 }
+// VS 畫面：每隻都縮放到「寬 150、高 135」的框內，大隻的（大岩蛇、超夢）才不會蓋到中間的 VS 與對手
+function introK(m) { const im = IMGS[m.id]; if (!im || !im.naturalWidth) return 3; return Math.min(3, 150 / im.naturalWidth, 122 / im.naturalHeight); }
 function drawIntro() {
   drawBackground(false);
-  const a = MONS[picks[0]], b = MONS[picks[1]], k = 3, ka = k * monK(a) / SPRITE_K, kb = k * monK(b) / SPRITE_K, e = Math.min(1, (120 - timer) / 20), ease = 1 - Math.pow(1 - e, 3);
+  const a = MONS[picks[0]], b = MONS[picks[1]], ka = introK(a), kb = introK(b), e = Math.min(1, (120 - timer) / 20), ease = 1 - Math.pow(1 - e, 3);
   ctx.fillStyle = '#00000050'; ctx.fillRect(0, 70, W, 150);
   drawSprite(a.id, -80 + (W * 0.27 + 80) * ease, 215, ka, 1); drawSprite(b.id, W + 80 - (W * 0.27 + 80) * ease, 215, kb, -1);
   text(t('vs'), W / 2, 160, 40, '#ffd23f');
-  text('P1', W * 0.27, 96, 14, '#7cf'); text(mn(a), W * 0.27, 242, 16);
-  text(mode === 1 ? t('cpu') : 'P2', W * 0.73, 96, 14, '#f99'); text(mn(b), W * 0.73, 242, 16);
+  text('P1', W * 0.27, 86, 14, '#7cf'); text(mn(a), W * 0.27, 242, 16);
+  text(mode === 1 ? t('cpu') : 'P2', W * 0.73, 86, 14, '#f99'); text(mn(b), W * 0.73, 242, 16);
   if (timer < 90) text(t('skip'), W / 2, 288, 10, '#ffffffaa');
 }
 function drawOnline() {
@@ -1042,6 +1078,7 @@ function draw() {
     case 'settings': settingsReturn === 'pause' ? (drawGameScene(), dimOverlay(), drawMenu(menuDef(), t('settings'))) : drawSettings(); break;
     case 'howto': drawHowto(); break;
     case 'online': drawOnline(); break;
+    case 'join': drawJoin(); break;
     case 'netwait': drawNetWait(); break;
     case 'pick': drawPick(); break;
     case 'intro': drawIntro(); break;
@@ -1078,6 +1115,7 @@ cv.addEventListener('pointermove', e => {
 cv.addEventListener('pointerdown', e => {
   cv.focus(); window.focus();
   const [x, y] = toLogical(e), def = menuDef();
+  if (state === 'join') { const k = joinKeyRects().find(q => inRect(x, y, q)); if (k) { if (k.id === 'back') go('online'); else joinPress(k.id); } return; }
   if (state === 'title' && inRect(x, y, langBtnRect())) { cycleLang(1); beep(520, 0.05); return; }
   if (state === 'title' && y < 100 && x > 90 && x < W - 110) { logoTaps = (performance.now() - lastLogoTap < 1200 ? logoTaps : 0) + 1; lastLogoTap = performance.now(); if (logoTaps >= 10) { logoTaps = 0; unlockOnix(); } }
   if (def) {
@@ -1097,7 +1135,9 @@ cv.addEventListener('pointerdown', e => {
   if ((state === 'play' || state === 'point') && y < 42 && Math.abs(x - W / 2) < 36) doPause();
 });
 cv.addEventListener('contextmenu', e => e.preventDefault());
-document.addEventListener('visibilitychange', () => { if (document.hidden) doPause(); });
+const releaseAllKeys = () => { for (const k in keys) keys[k] = false; };
+window.addEventListener('blur', releaseAllKeys);
+document.addEventListener('visibilitychange', () => { if (document.hidden) { releaseAllKeys(); doPause(); } });
 
 // ======================= 手機虛擬按鈕 =======================
 const padL = document.getElementById('padL'), padR = document.getElementById('padR');
