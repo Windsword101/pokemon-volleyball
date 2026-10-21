@@ -85,6 +85,7 @@ const I = {
     pSteer: '念力操控中！',
     pImmune: '免疫！', pFlinch: '震退！', unlockHidden: '★ 隱藏角色解鎖：{name}！',
     master: '大師',
+    you: '你', opp: '對手',
     musicOpt: '音樂音量', tapMusic: '點一下畫面開啟音樂',
     deuceOpt: '平手需連得兩分', deuceHud: '平手　需連得兩分才贏', advHud: '{name} 賽末點', ht8: '平手（如 6:6）後，需領先 2 分才算獲勝（可在設定關閉）',
     ...NET_STR.zh, title: '寶可夢排球', subtitle: '粉絲同人練習作品・非營利', vsCpu: '單人　對電腦', vs2p: '雙人　對戰', howto: '玩法說明', settings: '設定',
@@ -106,6 +107,7 @@ const I = {
     pSteer: 'Steer it!',
     pImmune: 'Immune!', pFlinch: 'Knocked back!', unlockHidden: '★ Hidden Pokémon unlocked: {name}!',
     master: 'Master',
+    you: 'YOU', opp: 'OPP',
     musicOpt: 'Music', tapMusic: 'Tap anywhere to start the music',
     deuceOpt: 'Win by 2 (deuce)', deuceHud: 'DEUCE — win by 2', advHud: '{name} advantage', ht8: 'When tied near the end (e.g. 6–6), you must win by 2 points (can be turned off in Settings)',
     ...NET_STR.en, title: 'Pokémon Volleyball', subtitle: 'Fan-made practice project · non-profit', vsCpu: 'vs CPU (1P)', vs2p: '2 Players', howto: 'How to Play', settings: 'Settings',
@@ -127,6 +129,7 @@ const I = {
     pSteer: '念力でそうさ！',
     pImmune: 'こうかなし！', pFlinch: 'ふきとんだ！', unlockHidden: '★ かくしキャラ解放：{name}！',
     master: 'マスター',
+    you: 'あなた', opp: '相手',
     musicOpt: 'BGM音量', tapMusic: '画面をタップで音楽スタート',
     deuceOpt: 'デュース（2点差）', deuceHud: 'デュース — 2点差で勝利', advHud: '{name} アドバンテージ', ht8: '終盤で同点（例 6-6）になったら2点差をつけた方が勝ち（設定でオフ可）',
     ...NET_STR.ja, title: 'ポケモンバレー', subtitle: 'ファン制作の練習作品・非営利', vsCpu: 'CPUと対戦（1P）', vs2p: '2人で対戦', howto: '遊び方', settings: '設定',
@@ -656,7 +659,7 @@ function menuDefRaw() {
       return { y0: net.status === 'waitJoin' ? 222 : 250, gap: 30, items };
     }
     case 'over': if (net.role) return { y0: 172, gap: 32, items: [
-      { label: () => net.waitRm ? t('waitRematch') : t('rematch'), go: netRematch }, { label: () => t('quit'), go: quitToTitle }] };
+      { label: () => net.waitRm ? t('waitRematch') : t('rematch'), go: netRematch }, { label: () => t('changeChar'), go: netChangeChars }, { label: () => t('quit'), go: quitToTitle }] };
       return { y0: 172, gap: 32, items: [
       { label: () => t('rematch'), go: () => { startMatch(); beep(600, 0.06); } }, { label: () => t('changeChar'), go: () => startPick(mode) }, { label: () => t('quit'), go: quitToTitle }] };
   }
@@ -773,7 +776,10 @@ function netJoin(code) {
   peer.on('error', e => { if (net.peer === peer) netFail(e.type === 'peer-unavailable' ? 'errNotFound' : 'errNet'); });
   net.to = setTimeout(() => { if (net.status === 'connecting') netFail('errNet'); }, 15000);
 }
-function netStartPick() { mode = 2; pickStep = 0; cursor = [posOf(picks[0]), posOf(picks[0])]; buildPads(); go('pick'); }
+function netStartPick() { mode = 2; pickStep = 0; const my = picks[net.role === 'host' ? 0 : 1] ?? 0; cursor = [posOf(my), posOf(my)]; buildPads(); go('pick'); }
+// 任一方在結束畫面選「換角色」→ 雙方都回到選角畫面，重新選完後由房主開始
+function netRepick() { net.myPicked = false; net.remotePick = null; net.hostRm = net.guestRm = net.waitRm = false; players = []; net.status = 'connected'; netStartPick(); }
+function netChangeChars() { try { net.conn.send({ t: 'repick' }); } catch (e) {} netRepick(); }
 function netPicked() {
   const myPick = avail()[cursor[0]]; picks[net.role === 'host' ? 0 : 1] = myPick; net.myPicked = true; net.conn.send({ t: 'pick', v: myPick });
   net.status = 'waitPick'; state = 'netwait'; focus = 0; netMaybeStart();
@@ -794,6 +800,7 @@ function onNetData(m) {
   else if (m.t === 'start' && net.role === 'guest') { picks = m.picks.slice(); mode = 2; players = []; state = 'intro'; timer = 120; beep(500, 0.15, 'square', 0.06, 300); }
   else if (m.t === 'i' && net.role === 'host') { const r = net.remote; r.left = !!m.l; r.right = !!m.r; r.jump = !!m.j; r.spike = r.spike || !!m.sp; r.skill = r.skill || !!m.sk; }
   else if (m.t === 's' && net.role === 'guest') applySnapshot(m);
+  else if (m.t === 'repick') { if (state === 'over' || state === 'netwait' || state === 'pick') netRepick(); }
   else if (m.t === 'rematch' && net.role === 'host') { net.guestRm = true; if (net.hostRm) { net.hostRm = net.guestRm = false; net.waitRm = false; startMatch(); } }
 }
 const r2 = v => Math.round(v * 100) / 100;
@@ -885,8 +892,24 @@ function drawSprite(id, x, feet, k, face, rot = 0, sx = 1, sy = 1) {
   else { ctx.scale(-1, 1); ctx.drawImage(img, -w / 2, -h, w, h); }
   ctx.restore();
 }
+// 玩家識別：左邊 P1 = 藍、右邊 P2 = 紅；線上對戰標「你／對手」，單人標 P1 / CPU，雙人標 P1 / P2
+const PCOL = ['#3d8bff', '#ff4d4d'], PCOL_LIGHT = ['#7cf', '#f99'];
+function labelOf(i) {
+  if (net.role) return i === (net.role === 'host' ? 0 : 1) ? t('you') : t('opp');
+  if (mode === 1) return i === 0 ? 'P1' : t('cpu');
+  return 'P' + (i + 1);
+}
+function drawTag(str, cx, y, col, size = 9) {   // 圓角小標籤 + 向下箭頭
+  ctx.font = `${size}px ${FONT}`; const w = Math.ceil(ctx.measureText(str).width) + 10, h = size + 5;
+  const x = Math.max(w / 2 + 2, Math.min(W - w / 2 - 2, cx)), top = Math.max(2, y - h);
+  ctx.fillStyle = '#1d1a2b'; ctx.fillRect(Math.round(x - w / 2) - 1, top - 1, w + 2, h + 2);
+  ctx.fillStyle = col; ctx.fillRect(Math.round(x - w / 2), top, w, h);
+  ctx.beginPath(); ctx.moveTo(cx - 4, top + h); ctx.lineTo(cx + 4, top + h); ctx.lineTo(cx, top + h + 5); ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+  ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText(str, x, top + h - 4);
+}
 function drawMon(p) {
   const id = p.mon.id, feet = p.y + p.r + 3 - (p.mon.hover && p.onGround ? 7 + Math.sin(frame * 0.1 + p.side) * 2.5 : 0), air = (GROUND - p.r - p.y) / 130;
+  ctx.fillStyle = PCOL[p.side] + '88'; ctx.beginPath(); ctx.ellipse(p.x, GROUND + 4, p.r * 1.08 - air * 8, 7.5 - air * 2, 0, 0, 6.283); ctx.fill();   // 底色圈
   ctx.fillStyle = '#00000040'; ctx.beginPath(); ctx.ellipse(p.x, GROUND + 3, p.r * 0.93 - air * 8, 5 - air * 1.5, 0, 0, 6.283); ctx.fill();
   let sx = 1, sy = 1, rot = 0;
   if (p.landT > 0) { sy = 0.85; sx = 1.1; }
@@ -897,6 +920,8 @@ function drawMon(p) {
   if (p.stun > 0 && frame % 4 < 2) ctx.globalAlpha = 0.55;
   drawSprite(id, p.x, feet, monK(p.mon), p.face, rot, sx, sy);
   ctx.globalAlpha = 1;
+  { const im = IMGS[id], hs = im && im.naturalHeight ? im.naturalHeight * monK(p.mon) * sy : 60;   // 頭上標籤
+    const ty = (rot ? p.y - p.r - 20 : feet - hs - 7) - Math.sin(frame * 0.12 + p.side) * 1.5; drawTag(labelOf(p.side), p.x, Math.round(ty), PCOL[p.side]); }
   if (p.stun > 0) { ctx.fillStyle = '#ffe84a'; for (let i = 0; i < 3; i++) { const a = frame * 0.2 + i * 2.1; ctx.fillRect(Math.round(p.x + Math.cos(a) * 20), Math.round(p.y - 30 + Math.sin(a) * 6), 4, 4); } }
   if (p.spikeT > 0 || p.skillT > 0) {
     ctx.strokeStyle = p.skillT > 0 ? FXCOLOR[id] : '#fff'; ctx.lineWidth = 3; ctx.globalAlpha = 0.8;
@@ -948,12 +973,14 @@ function drawHUD() {
   drawDigits(scores[0], 20, 12, 6, 'left'); drawDigits(scores[1], W - 20, 12, 6, 'right');
   for (let i = 0; i < 2; i++) {
     const bx = i === 0 ? 14 : W - 14 - 110, e = players[i].energy, full = e >= 100;
-    ctx.fillStyle = '#1d1a2b'; ctx.fillRect(bx - 2, 48, 114, 12);
+    ctx.fillStyle = '#1d1a2b'; ctx.fillRect(bx - 2, 48, 114, 12); ctx.strokeStyle = PCOL[i]; ctx.lineWidth = 2; ctx.strokeRect(bx - 2, 48, 114, 12);
     for (let s = 0; s < 10; s++) {
       ctx.fillStyle = e >= (s + 1) * 10 ? (full ? (frame % 20 < 10 ? '#fff' : FXCOLOR[players[i].mon.id]) : '#ffd23f') : '#3b3a52';
       ctx.fillRect(bx + s * 11, 50, 9, 8);
     }
-    text(mn(players[i].mon) + (full ? '  ' + t('skillReady') : ''), i === 0 ? bx : bx + 110, 76, 12, '#fff', i === 0 ? 'left' : 'right');
+    { ctx.font = `10px ${FONT}`; const lab = labelOf(i), tw = Math.ceil(ctx.measureText(lab).width) + 8, tx = i === 0 ? bx - 2 : bx + 112 - tw;
+      ctx.fillStyle = PCOL[i]; ctx.fillRect(tx, 64, tw, 14); ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText(lab, tx + tw / 2, 75);
+      text(mn(players[i].mon) + (full ? '  ' + t('skillReady') : ''), i === 0 ? tx + tw + 5 : tx - 5, 76, 12, '#fff', i === 0 ? 'left' : 'right'); }
   }
   if ((state === 'play' || state === 'point') && !net.role) {  // 暫停鈕
     ctx.fillStyle = '#1d1a2b'; ctx.fillRect(W / 2 - 12, 6, 24, 18); ctx.fillStyle = '#fff'; ctx.fillRect(W / 2 - 5, 10, 4, 10); ctx.fillRect(W / 2 + 1, 10, 4, 10);
@@ -1052,8 +1079,8 @@ function drawIntro() {
   ctx.fillStyle = '#00000050'; ctx.fillRect(0, 70, W, 150);
   drawSprite(a.id, -80 + (W * 0.27 + 80) * ease, 215, ka, 1); drawSprite(b.id, W + 80 - (W * 0.27 + 80) * ease, 215, kb, -1);
   text(t('vs'), W / 2, 160, 40, '#ffd23f');
-  text('P1', W * 0.27, 86, 14, '#7cf'); text(mn(a), W * 0.27, 242, 16);
-  text(mode === 1 ? t('cpu') : 'P2', W * 0.73, 86, 14, '#f99'); text(mn(b), W * 0.73, 242, 16);
+  text(labelOf(0), W * 0.27, 86, 14, PCOL_LIGHT[0]); text(mn(a), W * 0.27, 242, 16);
+  text(labelOf(1), W * 0.73, 86, 14, PCOL_LIGHT[1]); text(mn(b), W * 0.73, 242, 16);
   if (timer < 90) text(t('skip'), W / 2, 288, 10, '#ffffffaa');
 }
 function drawOnline() {
