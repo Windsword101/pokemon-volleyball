@@ -828,6 +828,7 @@ function pickKeys() {
   const step = pickStep;
   if (hit(K_LEFT)) { cursor[step] = (cursor[step] + nMons() - 1) % nMons(); beep(480, 0.03); }
   if (hit(K_RIGHT)) { cursor[step] = (cursor[step] + 1) % nMons(); beep(480, 0.03); }
+  if (nMons() >= 7 && (hit(K_UP) || hit(K_DOWN))) { const c = cursor[step]; cursor[step] = c < 4 ? Math.min(c + 4, nMons() - 1) : c - 4; beep(480, 0.03); }
   if (hit(K_OK)) confirmPick();
   if (hit(K_BACK)) backPick();
 }
@@ -975,26 +976,31 @@ const cardN = () => nMons();
 const cardSpacing = () => cardN() <= 4 ? 103 : Math.floor(412 / cardN());
 const cardHalf = () => cardN() <= 4 ? 46 : Math.floor(cardSpacing() / 2) - 3;
 function cardX(i) { const n = cardN(), sp = cardSpacing(); return n <= 4 ? 62 + i * 103 : Math.round(10 + (412 - sp * n) / 2 + sp / 2 + i * sp); }
-function cardK(m, hw) { const im = IMGS[m.id]; if (!im || !im.naturalWidth) return SPRITE_K; return Math.min(SPRITE_K, (hw * 2 - 8) / im.naturalWidth, 80 / im.naturalHeight); }
+function cardRect(i) {
+  const n = cardN();
+  if (n >= 7) { const row = i < 4 ? 0 : 1, col = row ? i - 4 : i, cnt = row ? n - 4 : 4; return { cx: W / 2 + (col - (cnt - 1) / 2) * 103, top: 44 + row * 58, hw: 46, h: 56, two: true }; }
+  return { cx: cardX(i), top: 48, hw: cardHalf(), h: 104, two: false };
+}
+function cardK(m, hw, maxH = 80) { const im = IMGS[m.id]; if (!im || !im.naturalWidth) return SPRITE_K; return Math.min(SPRITE_K, (hw * 2 - 8) / im.naturalWidth, maxH / im.naturalHeight); }
 function pickBtnRects() { return { back: { x: 8, y: 264, w: 104, h: 32 }, ok: { x: W - 112, y: 264, w: 104, h: 32 } }; }
 function drawPick() {
   drawBackdrop(0.6);
   text(mode === 1 || net.role ? t('pickTitle1') : t('pickTitle', { n: pickStep + 1 }), W / 2, 34, 18, '#ffd23f');
   avail().map(i => MONS[i]).forEach((m, i) => {
-    const x = cardX(i), sel = cursor[pickStep] === i, hw = cardHalf();
-    ctx.fillStyle = sel ? '#ffffff45' : '#ffffff18'; ctx.fillRect(x - hw, 48, hw * 2, 104);
-    if (sel) { ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 3; ctx.strokeRect(x - hw, 48, hw * 2, 104); }
-    drawSprite(m.id, x, 128 - (sel ? Math.abs(Math.sin(frame * 0.12)) * 6 : 0), cardK(m, hw), 1);
-    text(mn(m), x, 146, hw >= 40 ? 12 : hw >= 32 ? 10 : 9);
-    if (!net.role && pickStep === 1 && picks[0] === avail()[i]) text('P1', x - hw + 8, 62, 11, '#7cf', 'left');
+    const rc = cardRect(i), x = rc.cx, hw = rc.hw, sel = cursor[pickStep] === i, hop = sel ? Math.abs(Math.sin(frame * 0.12)) * (rc.two ? 3 : 6) : 0;
+    ctx.fillStyle = sel ? '#ffffff45' : '#ffffff18'; ctx.fillRect(x - hw, rc.top, hw * 2, rc.h);
+    if (sel) { ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 3; ctx.strokeRect(x - hw, rc.top, hw * 2, rc.h); }
+    drawSprite(m.id, x, rc.top + (rc.two ? 38 : 80) - hop, cardK(m, hw, rc.two ? 34 : 80), 1);
+    text(mn(m), x, rc.top + rc.h - (rc.two ? 6 : 6), hw >= 40 ? (rc.two ? 11 : 12) : hw >= 32 ? 10 : 9);
+    if (!net.role && pickStep === 1 && picks[0] === avail()[i]) text('P1', x - hw + 8, rc.top + 14, 11, '#7cf', 'left');
   });
   const m = MONS[avail()[cursor[pickStep]]];
   ctx.fillStyle = '#00000070'; ctx.fillRect(16, 160, W - 32, 100);
   text(m.sk[S.lang], 28, 180, 15, FXCOLOR[m.id], 'left'); text(t('skill'), W - 28, 180, 10, '#ffffff99', 'right');
-  wrap(m.desc[S.lang], 232, 11).slice(0, 4).forEach((l, i) => text(l, 28, 198 + i * 13.5, 11, '#fff', 'left'));
+  wrap(m.desc[S.lang], 224, 11).slice(0, 4).forEach((l, i) => text(l, 28, 198 + i * 13.5, 11, '#fff', 'left'));
   [[t('speed'), m.speed / 5], [t('jump'), (m.jump - 9) / 5]].forEach(([lab, v], i) => {
-    const y = 192 + i * 24; text(lab, W - 150, y + 8, 10, '#fff', 'left');
-    ctx.fillStyle = '#1d1a2b'; ctx.fillRect(W - 102, y, 78, 10); ctx.fillStyle = FXCOLOR[m.id]; ctx.fillRect(W - 101, y + 1, Math.round(76 * Math.min(1, v)), 8);
+    const y = 192 + i * 24; text(lab, W - 130, y + 8, 10, '#fff', 'left');
+    ctx.fillStyle = '#1d1a2b'; ctx.fillRect(W - 94, y, 70, 10); ctx.fillStyle = FXCOLOR[m.id]; ctx.fillRect(W - 93, y + 1, Math.round(68 * Math.min(1, v)), 8);
   });
   const b = pickBtnRects();
   [[b.back, t('back')], [b.ok, t('ok')]].forEach(([r, lab], i) => {
@@ -1084,7 +1090,7 @@ cv.addEventListener('pointerdown', e => {
     const b = pickBtnRects();
     if (inRect(x, y, b.back)) { backPick(); return; }
     if (inRect(x, y, b.ok)) { confirmPick(); return; }
-    for (let i = 0; i < nMons(); i++) if (x > cardX(i) - cardHalf() && x < cardX(i) + cardHalf() && y > 48 && y < 152) { if (cursor[pickStep] === i) confirmPick(); else { cursor[pickStep] = i; beep(480, 0.03); } }
+    for (let i = 0; i < nMons(); i++) { const rc = cardRect(i); if (x > rc.cx - rc.hw && x < rc.cx + rc.hw && y > rc.top && y < rc.top + rc.h) { if (cursor[pickStep] === i) confirmPick(); else { cursor[pickStep] = i; beep(480, 0.03); } } }
     return;
   }
   if (state === 'intro' && timer < 90) { startMatch(); return; }
