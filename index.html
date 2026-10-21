@@ -527,7 +527,7 @@ const aimFlat = (x, y, dir) => aimOverNet(x, y, dir, 0.15, [150, 120, 90, 60], 1
 function awardPoint(winner, key) {
   scores[winner]++; server = winner; state = 'point'; timer = 90; shake = 8;
   setMsg(key, winner);
-  if (scores[winner] >= winScore() && (!deuceOn() || scores[winner] - scores[1 - winner] >= 2)) { state = 'over'; focus = 0; overT = 70; setMsg('wins', winner); beep(880, 0.4, 'square', 0.06, 400); if (winner === 0 && mode === 1 && !net.role && scores[1] === 0 && !S.mew) setTimeout(() => unlockHidden('mew'), 900); }
+  if (scores[winner] >= winScore() && (!deuceOn() || scores[winner] - scores[1 - winner] >= 2)) { state = 'over'; focus = 0; overT = 70; setMsg('wins', winner); beep(880, 0.4, 'square', 0.06, 400); if (winner === 0 && mode === 1 && !net.role && scores[1] === 0 && !S.mew2) setTimeout(() => unlockHidden('mew2'), 900); }
 }
 
 // 夢幻的「變身」：複製對手角色的技能（對手也是夢幻時隨機一種）
