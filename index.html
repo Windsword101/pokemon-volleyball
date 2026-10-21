@@ -1109,7 +1109,7 @@ function draw() {
 // ======================= 指標（滑鼠 / 觸控）=======================
 cv.tabIndex = 0;
 const inRect = (x, y, r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
-let logoTaps = 0, lastLogoTap = 0;
+let logoTaps = 0, lastLogoTap = 0, creditTaps = 0, lastCreditTap = 0;
 const portraitMQ = matchMedia('(orientation:portrait)');
 function toLogical(e) {
   const r = cv.getBoundingClientRect();
@@ -1133,6 +1133,7 @@ cv.addEventListener('pointerdown', e => {
   const [x, y] = toLogical(e), def = menuDef();
   if (state === 'join') { const k = joinKeyRects().find(q => inRect(x, y, q)); if (k) { if (k.id === 'back') go('online'); else joinPress(k.id); } return; }
   if (state === 'title' && inRect(x, y, langBtnRect())) { cycleLang(1); beep(520, 0.05); return; }
+  if (state === 'title' && y > 288 && x > 130 && x < W - 130) { creditTaps = (performance.now() - lastCreditTap < 1200 ? creditTaps : 0) + 1; lastCreditTap = performance.now(); if (creditTaps >= 5) { creditTaps = 0; unlockHidden('mew'); } return; }   // 手機彩蛋：連點底部署名 5 次 → 夢幻
   if (state === 'title' && y < 100 && x > 90 && x < W - 110) { logoTaps = (performance.now() - lastLogoTap < 1200 ? logoTaps : 0) + 1; lastLogoTap = performance.now(); if (logoTaps >= 10) { logoTaps = 0; unlockOnix(); } }
   if (def) {
     if (state === 'over' && overT > 0) return;

@@ -31,6 +31,15 @@ Rules: max 3 touches per side; first to N points (5/7/11/15, in Settings); optio
 WebRTC peer-to-peer via [PeerJS](https://peerjs.com/) (free public broker). The host (P1) runs the simulation; the guest sends inputs and renders snapshots, so the guest has about one round-trip of input delay.
 Some strict firewalls / NATs can block direct connections (no TURN server is configured).
 
+## Hidden characters (secret codes)
+| Character | Keyboard (title screen) | Mobile / mouse |
+|---|---|---|
+| Onix | `↑ ↑ ↓ ↓ ← → ← → B A` | tap the game title 10 times |
+| Mewtwo | type `MEW2`, or beat the CPU 7–0 | beat the CPU 7–0 |
+| Mew | type `MEW` | tap the credit line at the bottom 5 times |
+
+Unlocks are saved per device (browser).
+
 ## Notes
 - Everything is in `index.html` (sprites are embedded). `assets/` holds the original image/audio files.
 - Pokémon and their names/sprites belong to Nintendo / Game Freak / Creatures Inc. Sprites come from [PokeAPI/sprites](https://github.com/PokeAPI/sprites). This is an unofficial fan project for personal practice, **not for commercial use**.
