@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="theme-color" content="#10131c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="寶可夢排球">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>寶可夢排球 Pokémon Volleyball</title>
 <meta name="author" content="wo.FAN.H">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,6 +30,7 @@
   .grp.p2{grid-template-columns:repeat(6,1fr);gap:6px;width:100%;max-width:200px}
   .grp.p2 .jump,.grp.p2 .hit,.grp.p2 .skill{grid-column:span 2;min-height:54px;min-width:0;font-size:13px}
   .grp.p2 .dir{grid-column:span 3;min-height:58px;min-width:0}
+  #joyZone,#toast{display:none}
   #fs{display:none;position:fixed;top:6px;right:6px;z-index:5;font:12px system-ui;color:#fff;background:#0007;border:1px solid #fff5;border-radius:8px;padding:6px 10px}
   #rot{display:none;font-size:12px;opacity:.75;text-align:center;padding:4px 12px}
   /* ===== 手機 / 觸控裝置（html.touch 由 JS 偵測，不依賴 pointer:coarse）===== */
@@ -41,6 +49,16 @@
   html.touch .grp.p2 .jump,html.touch .grp.p2 .hit,html.touch .grp.p2 .skill{min-height:calc(var(--s)*.9);min-width:0;font-size:11px}
   html.touch .grp.p2 .dir{min-height:calc(var(--s)*.95);min-width:0}
   body[data-game="1"] .pad{visibility:visible}
+  /* 虛擬搖桿（只有左右）：在左半邊按住就出現，往左右拖就是移動；拖太遠搖桿會跟著手指 */
+  html.touch body[data-game="1"][data-joy="1"] #joyZone{display:block;position:absolute;left:0;bottom:0;width:46%;height:74%;z-index:2;touch-action:none}
+  .joy-rest,.joy-pill{position:absolute;width:150px;height:46px;border-radius:23px;background:#ffffff1a;border:2px solid #ffffff55;box-sizing:border-box;pointer-events:none}
+  .joy-rest{left:max(18px,env(safe-area-inset-left));bottom:30px;opacity:.55}
+  .joy-pill{opacity:0}
+  .joy-pill.on{opacity:.95}
+  .joy-rest::after{content:"◀  ▶";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:12px system-ui;color:#fff;letter-spacing:34px;text-indent:34px;opacity:.7}
+  .joy-knob{position:absolute;left:50%;top:50%;width:42px;height:42px;margin:-21px 0 0 -21px;border-radius:50%;background:#ffffffe0;box-shadow:0 2px 6px #0007}
+  html.touch #joyZone.touching .joy-rest{opacity:0}
+  html.touch #toast.show{display:block;position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:9;max-width:80%;padding:8px 12px;border-radius:10px;background:#000c;border:1px solid #fff5;font:13px/1.4 system-ui,"Microsoft JhengHei","Hiragino Sans",sans-serif;text-align:center}
   /* 手機直拿時：把整個畫面旋轉 90° 變成橫向版面（不需要使用者轉手機）*/
   @media (orientation:portrait){
     html.touch #app{left:100vw;left:100dvw;width:100vh;width:100dvh;height:100vw;height:100dvw;transform-origin:top left;transform:rotate(90deg)}
@@ -56,6 +74,8 @@
   <canvas id="c" width="864" height="608"></canvas>
   <div class="pad" id="padR"></div>
   <div id="help"></div>
+  <div id="joyZone"><div class="joy-rest"></div></div>
+  <div id="toast"></div>
 </div>
 <button id="fs"></button>
 <div id="rot"></div>
@@ -86,6 +106,7 @@ const I = {
     pImmune: '免疫！', pFlinch: '震退！', unlockHidden: '★ 隱藏角色解鎖：{name}！',
     master: '大師',
     you: '你', opp: '對手',
+    fsHint: '全螢幕：用 Safari 的「分享」→「加入主畫面」，再從主畫面開啟；或改用 Chrome',
     musicOpt: '音樂音量', tapMusic: '點一下畫面開啟音樂',
     deuceOpt: '平手需連得兩分', deuceHud: '平手　需連得兩分才贏', advHud: '{name} 賽末點', ht8: '平手（如 6:6）後，需領先 2 分才算獲勝（可在設定關閉）',
     ...NET_STR.zh, title: '寶可夢排球', subtitle: '粉絲同人練習作品・非營利', vsCpu: '單人　對電腦', vs2p: '雙人　對戰', howto: '玩法說明', settings: '設定',
@@ -108,6 +129,7 @@ const I = {
     pImmune: 'Immune!', pFlinch: 'Knocked back!', unlockHidden: '★ Hidden Pokémon unlocked: {name}!',
     master: 'Master',
     you: 'YOU', opp: 'OPP',
+    fsHint: 'Fullscreen: in Safari tap Share → Add to Home Screen, then open it from the Home Screen (or use Chrome)',
     musicOpt: 'Music', tapMusic: 'Tap anywhere to start the music',
     deuceOpt: 'Win by 2 (deuce)', deuceHud: 'DEUCE — win by 2', advHud: '{name} advantage', ht8: 'When tied near the end (e.g. 6–6), you must win by 2 points (can be turned off in Settings)',
     ...NET_STR.en, title: 'Pokémon Volleyball', subtitle: 'Fan-made practice project · non-profit', vsCpu: 'vs CPU (1P)', vs2p: '2 Players', howto: 'How to Play', settings: 'Settings',
@@ -130,6 +152,7 @@ const I = {
     pImmune: 'こうかなし！', pFlinch: 'ふきとんだ！', unlockHidden: '★ かくしキャラ解放：{name}！',
     master: 'マスター',
     you: 'あなた', opp: '相手',
+    fsHint: '全画面：Safariの「共有」→「ホーム画面に追加」から起動（またはChromeで開く）',
     musicOpt: 'BGM音量', tapMusic: '画面をタップで音楽スタート',
     deuceOpt: 'デュース（2点差）', deuceHud: 'デュース — 2点差で勝利', advHud: '{name} アドバンテージ', ht8: '終盤で同点（例 6-6）になったら2点差をつけた方が勝ち（設定でオフ可）',
     ...NET_STR.ja, title: 'ポケモンバレー', subtitle: 'ファン制作の練習作品・非営利', vsCpu: 'CPUと対戦（1P）', vs2p: '2人で対戦', howto: '遊び方', settings: '設定',
@@ -1175,8 +1198,9 @@ function buildPads() {
   const single = mode === 1 || !!net.role;
   for (const k in keys) keys[k] = false;
   padL.innerHTML = ''; padR.innerHTML = '';
+  document.body.dataset.joy = single ? '1' : '0';
+  joyEnd({ pointerId: joyId });
   if (single) {
-    const m = div('grp move'); mkBtn(m, 0, 'left', '◀', 'dir'); mkBtn(m, 0, 'right', '▶', 'dir'); padL.appendChild(m);
     const a = div('grp act'); mkBtn(a, 0, 'jump', t('bJump'), 'jump'); mkBtn(a, 0, 'skill', t('bSkill'), 'skill'); mkBtn(a, 0, 'spike', t('bHit'), 'hit'); padR.appendChild(a);
   } else {
     [[0, padL], [1, padR]].forEach(([p, pad]) => {
@@ -1185,6 +1209,35 @@ function buildPads() {
     });
   }
 }
+
+// ======================= 虛擬搖桿（只有左右）=======================
+const joyZone = document.getElementById('joyZone');
+const joyPill = document.createElement('div'); joyPill.className = 'joy-pill';
+const joyKnob = document.createElement('div'); joyKnob.className = 'joy-knob'; joyPill.appendChild(joyKnob); joyZone.appendChild(joyPill);
+let joyId = null, joyOx = 0, joyDir = 0;
+const JOY_W = 150, JOY_R = 48, JOY_DEAD = 12;
+function frameXY(e, el) {   // 指標位置換成「元素自己的座標」（手機直拿時整個畫面旋轉了 90°）
+  const r = el.getBoundingClientRect();
+  return IS_TOUCH && portraitMQ.matches ? [e.clientY - r.top, r.right - e.clientX] : [e.clientX - r.left, e.clientY - r.top];
+}
+function joySet(dir) { if (dir === joyDir) return; setKey(0, 'left', dir < 0); setKey(0, 'right', dir > 0); joyDir = dir; }
+joyZone.addEventListener('pointerdown', e => {
+  if (joyId !== null) return; e.preventDefault(); joyId = e.pointerId;
+  try { joyZone.setPointerCapture(joyId); } catch (_) {}
+  const [x, y] = frameXY(e, joyZone); joyOx = x;
+  joyPill.style.left = (x - JOY_W / 2) + 'px'; joyPill.style.top = (y - 23) + 'px'; joyKnob.style.transform = 'translateX(0)';
+  joyPill.classList.add('on'); joyZone.classList.add('touching');
+});
+joyZone.addEventListener('pointermove', e => {
+  if (e.pointerId !== joyId) return;
+  const [x] = frameXY(e, joyZone); let dx = x - joyOx;
+  if (Math.abs(dx) > JOY_R * 1.7) { const over = dx - Math.sign(dx) * JOY_R * 1.7; joyOx += over; dx = Math.sign(dx) * JOY_R * 1.7; joyPill.style.left = (joyOx - JOY_W / 2) + 'px'; }   // 拖太遠：搖桿跟著手指走
+  joyKnob.style.transform = `translateX(${Math.max(-JOY_R, Math.min(JOY_R, dx))}px)`;
+  joySet(Math.abs(dx) < JOY_DEAD ? 0 : Math.sign(dx));
+});
+function joyEnd(e) { if (e.pointerId !== joyId) return; joyId = null; joySet(0); joyPill.classList.remove('on'); joyZone.classList.remove('touching'); }
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => joyZone.addEventListener(ev, joyEnd));
+joyZone.addEventListener('contextmenu', e => e.preventDefault());
 
 // ======================= 語言套用 / 全螢幕 =======================
 const fsBtn = document.getElementById('fs');
@@ -1197,16 +1250,21 @@ function applyLang() {
   buildPads();
 }
 const canFs = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
-if (!canFs) fsBtn.style.display = 'none';
+const isStandalone = (window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches)) || navigator.standalone === true;
+if (isStandalone) fsBtn.style.display = 'none';   // 已經是從主畫面開啟的全螢幕 App
+const toastEl = document.getElementById('toast'); let toastTimer = 0;
+function showToast(str) { toastEl.textContent = str; toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 6000); }
 fsBtn.addEventListener('click', async () => {
+  if (!canFs) { showToast(t('fsHint')); return; }
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
     else { await (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen).call(document.documentElement); if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }
-  } catch (e) {}
+  } catch (e) { showToast(t('fsHint')); }
 });
 
 // ======================= 主迴圈 =======================
 applyLang();
+if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
 (function autoJoinFromURL() {   // 邀請連結 ?room=1234：開啟後直接加入該房間
   try {
     const q = new URLSearchParams(location.search).get('room');
