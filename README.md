@@ -6,7 +6,7 @@ A fan-made, non-profit practice project inspired by *Pikachu Volleyball*.
 單一 HTML 檔的像素風排球遊戲。
 
 ## Features
-- 2D pixel volleyball, 1P vs CPU (Easy / Normal / Hard / Master, plus a hidden Tutorial level where the CPU is a skill-less Pichu), local 2P, and online 1v1
+- 2D pixel volleyball, 1P vs CPU (Easy / Normal / Hard / Master, plus a Tutorial level where the CPU is a skill-less Pichu), local 2P, and online 1v1
 - Playable Pokémon with their own skills (paralysis, soaked/slow, fast fireball, drifting ball, …) and **hidden characters** (secret codes)
 - Dive (direction + Hit on the ground), smash, 3-touch limit, win-by-2 (deuce) option
 - 3 languages: 繁體中文 / English / 日本語
@@ -37,7 +37,7 @@ Some strict firewalls / NATs can block direct connections (no TURN server is con
 | Onix | `↑ ↑ ↓ ↓ ← → ← → B A` | tap the game title 10 times |
 | Mewtwo | type `MEW2`, or beat the CPU 7–0 | beat the CPU 7–0 |
 | Mew | type `MEW` | tap the credit line at the bottom 5 times |
-| Pichu (Tutorial level, CPU-only) | click/tap the Pikachu at the bottom-left of the title screen 5 times | same |
+| Pichu (blank-slate, no skill; also the CPU in the Tutorial level) | click/tap the Pikachu at the bottom-left of the title screen 5 times | same |
 
 Unlocks are saved per device (browser).
 

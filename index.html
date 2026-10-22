@@ -93,7 +93,6 @@ const HTML_LANG = { zh: 'zh-Hant', en: 'en', ja: 'ja' };
 function guessLang() { const l = (navigator.language || '').toLowerCase(); return l.startsWith('ja') ? 'ja' : l.startsWith('zh') ? 'zh' : 'en'; }
 let S = (() => { const d = { lang: guessLang(), sound: true, diff: 2, dv: 2, pichu: false, win: 7, deuce: true, music: 50, onix: false, mew2: false, mew: false }; try { return { ...d, ...JSON.parse(localStorage.getItem('pokevb') || '{}') }; } catch (e) { return d; } })();
 if (!S.dv) { S.diff = Math.min(4, (S.diff | 0) + 1); S.dv = 2; saveS(); }
-if (S.diff === 0 && !S.pichu) S.diff = 1;   // 教學難度未解鎖時不能停在這一級
 // 舊存檔：難度編號整體後移一格（新增了最低的「皮丘」）
 const net = { role: null, peer: null, conn: null, status: '', code: '', err: '', events: [], replay: false, remote: { left: false, right: false, jump: false, spike: false, skill: false }, remotePick: null, myPicked: false, hostRm: false, guestRm: false, waitRm: false, to: 0 };
 function saveS() { try { localStorage.setItem('pokevb', JSON.stringify(S)); } catch (e) {} }
@@ -115,7 +114,7 @@ const I = {
     master: '大師',
     you: '你', opp: '對手',
     fsHint: '全螢幕：用 Safari 的「分享」→「加入主畫面」，再從主畫面開啟；或改用 Chrome',
-    pichuLv: '皮丘（教學）', tutorialNote: '教學模式：對手是皮丘，動作遲鈍、沒有技能', unlockPichu: '★ 解鎖教學難度「皮丘」！',
+    pichuLv: '皮丘（教學）', tutorialNote: '教學模式：對手是皮丘，動作遲鈍、沒有技能',
     musicOpt: '音樂音量', tapMusic: '點一下畫面開啟音樂',
     deuceOpt: '平手需連得兩分', deuceHud: '平手　需連得兩分才贏', advHud: '{name} 賽末點', ht8: '平手（如 6:6）後，需領先 2 分才算獲勝（可在設定關閉）',
     ...NET_STR.zh, title: '寶可夢排球', subtitle: '粉絲同人練習作品・非營利', vsCpu: '單人　對電腦', vs2p: '雙人　對戰', howto: '玩法說明', settings: '設定',
@@ -139,7 +138,7 @@ const I = {
     master: 'Master',
     you: 'YOU', opp: 'OPP',
     fsHint: 'Fullscreen: in Safari tap Share → Add to Home Screen, then open it from the Home Screen (or use Chrome)',
-    pichuLv: 'Pichu (Tutorial)', tutorialNote: 'Tutorial: your opponent is Pichu, slow and skill-less', unlockPichu: '★ Tutorial level "Pichu" unlocked!',
+    pichuLv: 'Pichu (Tutorial)', tutorialNote: 'Tutorial: your opponent is Pichu, slow and skill-less',
     musicOpt: 'Music', tapMusic: 'Tap anywhere to start the music',
     deuceOpt: 'Win by 2 (deuce)', deuceHud: 'DEUCE — win by 2', advHud: '{name} advantage', ht8: 'When tied near the end (e.g. 6–6), you must win by 2 points (can be turned off in Settings)',
     ...NET_STR.en, title: 'Pokémon Volleyball', subtitle: 'Fan-made practice project · non-profit', vsCpu: 'vs CPU (1P)', vs2p: '2 Players', howto: 'How to Play', settings: 'Settings',
@@ -163,7 +162,7 @@ const I = {
     master: 'マスター',
     you: 'あなた', opp: '相手',
     fsHint: '全画面：Safariの「共有」→「ホーム画面に追加」から起動（またはChromeで開く）',
-    pichuLv: 'ピチュー（入門）', tutorialNote: 'チュートリアル：相手はピチュー（わざなし・のんびり）', unlockPichu: '★ チュートリアル「ピチュー」解放！',
+    pichuLv: 'ピチュー（入門）', tutorialNote: 'チュートリアル：相手はピチュー（わざなし・のんびり）',
     musicOpt: 'BGM音量', tapMusic: '画面をタップで音楽スタート',
     deuceOpt: 'デュース（2点差）', deuceHud: 'デュース — 2点差で勝利', advHud: '{name} アドバンテージ', ht8: '終盤で同点（例 6-6）になったら2点差をつけた方が勝ち（設定でオフ可）',
     ...NET_STR.ja, title: 'ポケモンバレー', subtitle: 'ファン制作の練習作品・非営利', vsCpu: 'CPUと対戦（1P）', vs2p: '2人で対戦', howto: '遊び方', settings: '設定',
@@ -216,13 +215,13 @@ const MONS = [
   { id: 'mew', hidden: 'mew', r: 22, k: 1.5, color: '#ff9ad5', speed: 5.0, jump: 12.5, eMul: 0.8, doubleJump: true, noRecover: true, hover: true,
     name: { zh: '夢幻', en: 'Mew', ja: 'ミュウ' }, sk: { zh: '變身', en: 'Transform', ja: 'へんしん' },
     desc: { zh: '複製對手角色的技能並立刻使用。可二段跳，撲球後不會趴地，但能量累積較慢。', en: "Copies the opponent's skill and uses it. Double jump, no dive recovery, but charges energy slower.", ja: '相手のわざをコピーして使う。2段ジャンプ、ダイブ後の隙なし。ゲージはたまりにくい。' } },
-  { id: 'pichu', hidden: 'pichu', cpuOnly: true, r: 24, k: 1.5, color: '#ffe27a', speed: 3.6, jump: 11, eMul: 0,
+  { id: 'pichu', hidden: 'pichu', r: 24, k: 1.5, color: '#ffe27a', speed: 3.6, jump: 11, eMul: 0,
     name: { zh: '皮丘', en: 'Pichu', ja: 'ピチュー' }, sk: { zh: '（無）', en: '(none)', ja: '（なし）' },
-    desc: { zh: '教學模式專用的白板角色：沒有技能，動作遲鈍。', en: 'Blank-slate tutorial opponent: no skill, slow moves.', ja: 'チュートリアル専用の相手。わざなし、動きがにぶい。' } },
+    desc: { zh: '白板角色：沒有技能、動作遲鈍，也是教學難度的電腦對手。', en: 'A blank-slate Pokémon: no skill, slow moves. Also the CPU opponent of the Tutorial level.', ja: 'わざなし・動きがにぶい白紙のポケモン。チュートリアルの相手でもある。' } },
 ];
 const mn = m => m.name[S.lang];
 const monK = m => m.k || SPRITE_K;
-const avail = () => MONS.map((_, i) => i).filter(i => !MONS[i].cpuOnly && (!MONS[i].hidden || S[MONS[i].hidden]));   // 目前可選的角色（MONS 索引）
+const avail = () => MONS.map((_, i) => i).filter(i => !MONS[i].hidden || S[MONS[i].hidden]);   // 目前可選的角色（MONS 索引）
 const nMons = () => avail().length;
 const PICHU_IDX = MONS.findIndex(x => x.id === 'pichu');
 const posOf = idx => Math.max(0, avail().indexOf(idx));
@@ -235,8 +234,8 @@ const AI_LEVELS = [
   { every: 3, err: 6, jump: 0.7, dive: 0.5, skill: 0.6, speed: 1.05, smash: 0.8, lead: 0.8 },     // 困難
   { every: 1, err: 0, jump: 0.95, dive: 0.9, skill: 0.9, speed: 1.3, smash: 1, lead: 1 },         // 大師
 ];
-const levelList = () => LEVEL_KEYS.map((_, i) => i).filter(i => i > 0 || S.pichu);
-const isTutorial = () => S.diff === 0 && S.pichu;
+const levelList = () => LEVEL_KEYS.map((_, i) => i);   // 五級難度都一直可選（教學難度＝對手是皮丘）
+const isTutorial = () => S.diff === 0;
 const WIN_OPTS = [5, 7, 11, 15];
 
 // ======================= 像素素材 =======================
@@ -365,10 +364,6 @@ function unlockHidden(flag) {
   [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => setTimeout(() => beep(f, 0.14, 'square', 0.06), i * 110));
 }
 const unlockOnix = () => unlockHidden('onix');
-function unlockPichu() {
-  S.pichu = true; saveS(); banner.s = t('unlockPichu'); banner.t = 220;
-  [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => beep(f, 0.12, 'square', 0.06), i * 100));
-}
 let pikaTaps = 0, lastPikaTap = 0, pikaBounce = 0;
 let typed = '', mewTimer = 0;   // 字母秘技：MEW2 → 超夢；MEW（之後 1.2 秒內沒再按 2）→ 夢幻
 window.addEventListener('keydown', e => {
@@ -427,7 +422,7 @@ function startPick(m) { mode = m; pickStep = 0; cursor = [posOf(picks[0]), posOf
 function startIntro() {
   if (mode === 1) {
     if (isTutorial()) picks[1] = PICHU_IDX;   // 教學：對手固定是白板皮丘
-    else do { picks[1] = avail()[Math.floor(Math.random() * nMons())]; } while (picks[1] === picks[0] && Math.random() < 0.7);
+    else { const pool = avail().filter(i => i !== PICHU_IDX); do { picks[1] = pool[Math.floor(Math.random() * pool.length)]; } while (picks[1] === picks[0] && Math.random() < 0.7); }
   }
   state = 'intro'; timer = 120; beep(500, 0.15, 'square', 0.06, 300);
 }
@@ -538,7 +533,7 @@ function updatePlayer(p, inp) {
     else if (!p.onGround && jumpEdge && m.doubleJump && p.air < 1) { p.air++; p.vy = -m.jump * 0.92; burst(p.x, p.y + p.r, FXCOLOR.mew, 8, 2); beep(700, 0.1, 'square', 0.04, 320); }
     if (inp.spike && p.spikeT <= 0) p.spikeT = 14;
   }
-  if (inp.skill && p.energy >= 100 && p.skillT <= 0 && p.dive <= 0) { p.skillT = 16; beep(300, 0.15, 'sawtooth', 0.05, 400); }
+  if (inp.skill && p.energy >= 100 && p.mon.eMul !== 0 && p.skillT <= 0 && p.dive <= 0) { p.skillT = 16; beep(300, 0.15, 'sawtooth', 0.05, 400); }
   p.vy += 0.55;
   if (m.glide && !p.onGround && inp.jump && p.vy > 2.4) p.vy = 2.4;   // 超夢：按住跳躍緩降
   p.jumpPrev = !!inp.jump;
@@ -1188,7 +1183,7 @@ cv.addEventListener('pointerdown', e => {
   if (state === 'title' && x < 84 && y > 186 && y < 274) {   // 點標題畫面左下角的皮卡丘 5 次 → 解鎖教學難度「皮丘」
     pikaBounce = 14; beep(900 + pikaTaps * 120, 0.06, 'square', 0.05);
     pikaTaps = (performance.now() - lastPikaTap < 1200 ? pikaTaps : 0) + 1; lastPikaTap = performance.now();
-    if (pikaTaps >= 5) { pikaTaps = 0; unlockPichu(); }
+    if (pikaTaps >= 5) { pikaTaps = 0; unlockHidden('pichu'); }
     return;
   }
   if (state === 'title' && y > 288 && x > 130 && x < W - 130) { creditTaps = (performance.now() - lastCreditTap < 1200 ? creditTaps : 0) + 1; lastCreditTap = performance.now(); if (creditTaps >= 5) { creditTaps = 0; unlockHidden('mew'); } return; }   // 手機彩蛋：連點底部署名 5 次 → 夢幻
