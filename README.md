@@ -10,7 +10,7 @@ A fan-made, non-profit practice project inspired by *Pikachu Volleyball*.
 - Playable Pokémon with their own skills (paralysis, soaked/slow, fast fireball, drifting ball, …) and **hidden characters** (secret codes)
 - Dive (direction + Hit on the ground), smash, 3-touch limit, win-by-2 (deuce) option
 - 3 languages: 繁體中文 / English / 日本語
-- Mobile: auto-landscape layout, left-thumb virtual stick (left/right only) + action buttons, no pinch zoom, installable (Add to Home Screen → fullscreen); BGM that switches to a battle track when a side is 2 points from winning
+- Mobile: auto-landscape layout, left-hand control **A** (floating left/right stick, default) or **B** (◀ ▶ buttons) — switch in Settings → Mobile Controls — plus action buttons, no pinch zoom, installable (Add to Home Screen → fullscreen); BGM that switches to a battle track when a side is 2 points from winning
 
 ## Play
 Open `index.html` in a browser, or serve the folder (GitHub Pages: Settings → Pages → Deploy from branch → `main` / root).

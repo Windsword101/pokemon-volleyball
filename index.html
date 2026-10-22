@@ -91,7 +91,7 @@ const LANGS = ['zh', 'en', 'ja'];
 const LANG_NAME = { zh: '繁體中文', en: 'English', ja: '日本語' };
 const HTML_LANG = { zh: 'zh-Hant', en: 'en', ja: 'ja' };
 function guessLang() { const l = (navigator.language || '').toLowerCase(); return l.startsWith('ja') ? 'ja' : l.startsWith('zh') ? 'zh' : 'en'; }
-let S = (() => { const d = { lang: guessLang(), sound: true, diff: 2, dv: 2, pichu: false, win: 7, deuce: true, music: 50, onix: false, mew2: false, mew: false }; try { return { ...d, ...JSON.parse(localStorage.getItem('pokevb') || '{}') }; } catch (e) { return d; } })();
+let S = (() => { const d = { lang: guessLang(), sound: true, diff: 2, dv: 2, ctrl: 'A', pichu: false, win: 7, deuce: true, music: 50, onix: false, mew2: false, mew: false }; try { return { ...d, ...JSON.parse(localStorage.getItem('pokevb') || '{}') }; } catch (e) { return d; } })();
 if (!S.dv) { S.diff = Math.min(4, (S.diff | 0) + 1); S.dv = 2; saveS(); }
 // 舊存檔：難度編號整體後移一格（新增了最低的「皮丘」）
 const net = { role: null, peer: null, conn: null, status: '', code: '', err: '', events: [], replay: false, remote: { left: false, right: false, jump: false, spike: false, skill: false }, remotePick: null, myPicked: false, hostRm: false, guestRm: false, waitRm: false, to: 0 };
@@ -115,6 +115,7 @@ const I = {
     you: '你', opp: '對手',
     fsHint: '全螢幕：用 Safari 的「分享」→「加入主畫面」，再從主畫面開啟；或改用 Chrome',
     pichuLv: '皮丘（教學）', tutorialNote: '教學模式：對手是皮丘，動作遲鈍、沒有技能',
+    ctrlOpt: '手機操作', ctrlHint: 'A：浮動搖桿　B：左右按鈕',
     musicOpt: '音樂音量', tapMusic: '點一下畫面開啟音樂',
     deuceOpt: '平手需連得兩分', deuceHud: '平手　需連得兩分才贏', advHud: '{name} 賽末點', ht8: '平手（如 6:6）後，需領先 2 分才算獲勝（可在設定關閉）',
     ...NET_STR.zh, title: '寶可夢排球', subtitle: '粉絲同人練習作品・非營利', vsCpu: '單人　對電腦', vs2p: '雙人　對戰', howto: '玩法說明', settings: '設定',
@@ -139,6 +140,7 @@ const I = {
     you: 'YOU', opp: 'OPP',
     fsHint: 'Fullscreen: in Safari tap Share → Add to Home Screen, then open it from the Home Screen (or use Chrome)',
     pichuLv: 'Pichu (Tutorial)', tutorialNote: 'Tutorial: your opponent is Pichu, slow and skill-less',
+    ctrlOpt: 'Mobile Controls', ctrlHint: 'A: floating stick   B: left / right buttons',
     musicOpt: 'Music', tapMusic: 'Tap anywhere to start the music',
     deuceOpt: 'Win by 2 (deuce)', deuceHud: 'DEUCE — win by 2', advHud: '{name} advantage', ht8: 'When tied near the end (e.g. 6–6), you must win by 2 points (can be turned off in Settings)',
     ...NET_STR.en, title: 'Pokémon Volleyball', subtitle: 'Fan-made practice project · non-profit', vsCpu: 'vs CPU (1P)', vs2p: '2 Players', howto: 'How to Play', settings: 'Settings',
@@ -163,6 +165,7 @@ const I = {
     you: 'あなた', opp: '相手',
     fsHint: '全画面：Safariの「共有」→「ホーム画面に追加」から起動（またはChromeで開く）',
     pichuLv: 'ピチュー（入門）', tutorialNote: 'チュートリアル：相手はピチュー（わざなし・のんびり）',
+    ctrlOpt: 'スマホ操作', ctrlHint: 'A：フローティングスティック　B：左右ボタン',
     musicOpt: 'BGM音量', tapMusic: '画面をタップで音楽スタート',
     deuceOpt: 'デュース（2点差）', deuceHud: 'デュース — 2点差で勝利', advHud: '{name} アドバンテージ', ht8: '終盤で同点（例 6-6）になったら2点差をつけた方が勝ち（設定でオフ可）',
     ...NET_STR.ja, title: 'ポケモンバレー', subtitle: 'ファン制作の練習作品・非営利', vsCpu: 'CPUと対戦（1P）', vs2p: '2人で対戦', howto: '遊び方', settings: '設定',
@@ -683,13 +686,14 @@ function menuDefRaw() {
       { label: () => t('vsCpu'), go: () => startPick(1) }, { label: () => t('vs2p'), go: () => startPick(2) },
       { label: () => t('online'), go: () => { net.err = ''; go('online'); } },
       { label: () => t('howto'), go: () => go('howto') }, { label: () => t('settings'), go: () => openSettings('title') }] };
-    case 'settings': return { y0: 92, gap: 28, wide: true, items: [
+    case 'settings': return { y0: IS_TOUCH ? 78 : 92, gap: IS_TOUCH ? 25 : 28, wide: true, items: [
       { label: () => t('language'), val: () => LANG_NAME[S.lang], adj: d => cycleLang(d) },
       { label: () => t('sound'), val: () => t(S.sound ? 'on' : 'off'), adj: () => { S.sound = !S.sound; saveS(); } },
       { label: () => t('musicOpt'), val: () => S.music ? S.music + '%' : t('off'), adj: d => { S.music = Math.max(0, Math.min(100, S.music + d * 10)); saveS(); unlockBgm(); } },
       { label: () => t('difficulty'), val: () => t(LEVEL_KEYS[S.diff]), adj: d => { const L = levelList(), i = Math.max(0, L.indexOf(S.diff)); S.diff = L[(i + d + L.length) % L.length]; saveS(); } },
       { label: () => t('winScore'), val: () => S.win, adj: d => cycleWin(d) },
       { label: () => t('deuceOpt'), val: () => t(S.deuce ? 'on' : 'off'), adj: () => { S.deuce = !S.deuce; saveS(); } },
+      ...(IS_TOUCH ? [{ label: () => t('ctrlOpt'), val: () => S.ctrl, hint: () => t('ctrlHint'), adj: () => { S.ctrl = S.ctrl === 'A' ? 'B' : 'A'; saveS(); buildPads(); } }] : []),
       { label: () => t('back'), go: closeSettings }] };
     case 'howto': return { y0: 268, gap: 30, items: [{ label: () => t('back'), go: () => go('title') }] };
     case 'pause': return { y0: 132, gap: 32, items: [
@@ -725,7 +729,7 @@ function menuKeys(def) {
   }
 }
 function drawMenu(def, title) {
-  if (title) text(title, W / 2, def.y0 - 52, 22, '#ffd23f');
+  if (title) text(title, W / 2, Math.max(30, def.y0 - 52), 22, '#ffd23f');
   def.items.forEach((it, i) => {
     const r = itemRect(def, i), f = i === focus;
     ctx.fillStyle = f ? '#ffffff38' : '#ffffff14'; ctx.fillRect(r.x, r.y, r.w, r.h);
@@ -735,6 +739,7 @@ function drawMenu(def, title) {
       text(`◀ ${it.val()} ▶`, r.x + r.w - 10, r.y + 19, 14, f ? '#ffd23f' : '#fff', 'right');
     } else text(it.label(), W / 2, r.y + 19, 15, f ? '#ffd23f' : '#fff');
   });
+  const cur = def.items[focus]; if (cur && cur.hint) text(cur.hint(), W / 2, 298, 10, '#ffffffcc');   // 選到的項目有補充說明時顯示在最下方
 }
 
 // ======================= 線上對戰（WebRTC / PeerJS，房主為權威）=======================
@@ -1235,9 +1240,11 @@ function buildPads() {
   const single = mode === 1 || !!net.role;
   for (const k in keys) keys[k] = false;
   padL.innerHTML = ''; padR.innerHTML = '';
-  document.body.dataset.joy = single ? '1' : '0';
+  const useStick = single && S.ctrl !== 'B';   // A = 浮動搖桿；B = 第一版的 ◀ ▶ 按鈕
+  document.body.dataset.joy = useStick ? '1' : '0';
   joyEnd({ pointerId: joyId });
   if (single) {
+    if (!useStick) { const m = div('grp move'); mkBtn(m, 0, 'left', '◀', 'dir'); mkBtn(m, 0, 'right', '▶', 'dir'); padL.appendChild(m); }
     const a = div('grp act'); mkBtn(a, 0, 'jump', t('bJump'), 'jump'); mkBtn(a, 0, 'skill', t('bSkill'), 'skill'); mkBtn(a, 0, 'spike', t('bHit'), 'hit'); padR.appendChild(a);
   } else {
     [[0, padL], [1, padR]].forEach(([p, pad]) => {
