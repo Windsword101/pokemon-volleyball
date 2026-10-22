@@ -364,7 +364,7 @@ function unlockHidden(flag) {
   [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => setTimeout(() => beep(f, 0.14, 'square', 0.06), i * 110));
 }
 const unlockOnix = () => unlockHidden('onix');
-let pikaTaps = 0, lastPikaTap = 0, pikaBounce = 0;
+let pikaTaps = 0, lastPikaTap = 0, pikaBounce = 0, bulbTaps = 0, lastBulbTap = 0, bulbBounce = 0;
 let typed = '', mewTimer = 0;   // 字母秘技：MEW2 → 超夢；MEW（之後 1.2 秒內沒再按 2）→ 夢幻
 window.addEventListener('keydown', e => {
   if (state === 'title' || state === 'pick') {
@@ -1044,8 +1044,9 @@ function drawGameScene() {
 const TITLE_MONS = [['elec', 40, 1], ['water', 92, 1], ['fire', W - 92, -1], ['grass', W - 40, -1]];
 function drawBackdrop(dim = 0.45) {
   drawBackground(false);
-  TITLE_MONS.forEach(([id, x, f], i) => { const hop = Math.max(0, Math.sin(frame * 0.06 + i * 1.6)) * 14 + (i === 0 ? Math.max(0, pikaBounce) * 1.4 : 0); drawSprite(id, x, GROUND + 3 - hop, SPRITE_K, f); });
+  TITLE_MONS.forEach(([id, x, f], i) => { const hop = Math.max(0, Math.sin(frame * 0.06 + i * 1.6)) * 14 + (i === 0 ? Math.max(0, pikaBounce) * 1.4 : i === 3 ? Math.max(0, bulbBounce) * 1.4 : 0); drawSprite(id, x, GROUND + 3 - hop, SPRITE_K, f); });
   if (pikaBounce > 0) pikaBounce -= 1;
+  if (bulbBounce > 0) bulbBounce -= 1;
   ctx.fillStyle = `rgba(0,0,0,${dim})`; ctx.fillRect(0, 0, W, H);
 }
 function langBtnRect() { return { x: W - 104, y: 8, w: 96, h: 20 }; }
@@ -1184,6 +1185,12 @@ cv.addEventListener('pointerdown', e => {
     pikaBounce = 14; beep(900 + pikaTaps * 120, 0.06, 'square', 0.05);
     pikaTaps = (performance.now() - lastPikaTap < 1200 ? pikaTaps : 0) + 1; lastPikaTap = performance.now();
     if (pikaTaps >= 5) { pikaTaps = 0; unlockHidden('pichu'); }
+    return;
+  }
+  if (state === 'title' && x > 372 && y > 186 && y < 274) {   // 點標題畫面右下角的妙蛙種子 5 次 → 解鎖超夢
+    bulbBounce = 14; beep(900 + bulbTaps * 120, 0.06, 'square', 0.05);
+    bulbTaps = (performance.now() - lastBulbTap < 1200 ? bulbTaps : 0) + 1; lastBulbTap = performance.now();
+    if (bulbTaps >= 5) { bulbTaps = 0; unlockHidden('mew2'); }
     return;
   }
   if (state === 'title' && y > 288 && x > 130 && x < W - 130) { creditTaps = (performance.now() - lastCreditTap < 1200 ? creditTaps : 0) + 1; lastCreditTap = performance.now(); if (creditTaps >= 5) { creditTaps = 0; unlockHidden('mew'); } return; }   // 手機彩蛋：連點底部署名 5 次 → 夢幻

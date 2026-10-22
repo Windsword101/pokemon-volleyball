@@ -35,7 +35,7 @@ Some strict firewalls / NATs can block direct connections (no TURN server is con
 | Character | Keyboard (title screen) | Mobile / mouse |
 |---|---|---|
 | Onix | `↑ ↑ ↓ ↓ ← → ← → B A` | tap the game title 10 times |
-| Mewtwo | type `MEW2`, or beat the CPU 7–0 | beat the CPU 7–0 |
+| Mewtwo | type `MEW2`, or beat the CPU 7–0 | click/tap the Bulbasaur at the bottom-right of the title screen 5 times, or beat the CPU 7–0 |
 | Mew | type `MEW` | tap the credit line at the bottom 5 times |
 | Pichu (blank-slate, no skill; also the CPU in the Tutorial level) | click/tap the Pikachu at the bottom-left of the title screen 5 times | same |
 
